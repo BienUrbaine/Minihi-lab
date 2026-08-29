@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Recherchez une adresse et identifiez les dispositifs d’aide applicables." />
+    <title>Minihi — Carte des aides</title>
+    <link rel="stylesheet" href="./leaflet.css" />
+    <link rel="stylesheet" href="./styles.css?v=20260808-12" />
+    <style>
+      .leaflet-control-scale-line {
+        background: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand" aria-label="Minihi">MINIHI</div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="search-panel" aria-labelledby="search-title">
+        <div class="panel-intro">
+          <h1 id="search-title">Vérifier l’éligibilité d’un logement</h1>
+          <p class="intro-copy">Consultez les périmètres d’aide pour savoir si un logement est éligible à un dispositif d’accompagnement à partir de son adresse.</p>
+        </div>
+
+        <div class="search-shell">
+          <label class="sr-only" for="address-input">Adresse à rechercher</label>
+          <span class="search-icon" aria-hidden="true"></span>
+          <input id="address-input" type="search" autocomplete="street-address" placeholder="Numéro, voie et commune" aria-controls="suggestions" aria-autocomplete="list" />
+          <span id="search-spinner" class="spinner" aria-hidden="true"></span>
+          <div id="suggestions" class="suggestions" role="listbox" aria-label="Adresses proposées"></div>
+        </div>
+
+        <div id="result" class="result result-empty" aria-live="polite">
+          <div class="empty-illustration" aria-hidden="true"><strong>?</strong></div>
+          <h2>Résultat de la recherche</h2>
+          <p>Sélectionnez une adresse pour afficher l’éligibilité du logement et le ou les dispositifs applicables.</p>
+        </div>
+
+        <button id="street-view-open" class="street-view-trigger" type="button" aria-controls="street-view-panel" aria-expanded="false" hidden>
+          <span class="street-view-trigger-icon" aria-hidden="true"></span>
+          Voir dans Street View
+        </button>
+      </section>
+
+      <div class="map-column">
+        <section class="map-panel" aria-label="Carte des périmètres d’aide">
+          <div id="map"></div>
+          <div id="map-status" class="map-status">Chargement des périmètres…</div>
+          <div class="map-legend"><span><i class="legend-zone"></i>Périmètres des dispositifs d’aide</span></div>
+          <aside id="street-view-panel" class="street-view-panel" aria-labelledby="street-view-title" hidden>
+            <div class="street-view-header">
+              <div>
+                <p class="street-view-kicker">Environnement immédiat</p>
+                <h2 id="street-view-title">Vue de la rue</h2>
+              </div>
+              <button id="street-view-close" class="street-view-close" type="button" aria-label="Fermer la vue de la rue">×</button>
+            </div>
+            <p id="street-view-address" class="street-view-address"></p>
+            <div id="street-view-status" class="street-view-status" role="status" aria-live="polite"></div>
+            <iframe
+              id="street-view-frame"
+              class="street-view-frame"
+              title="Vue Google Street View de l’adresse sélectionnée"
+              loading="lazy"
+              allowfullscreen
+              referrerpolicy="strict-origin-when-cross-origin"
+              hidden
+            ></iframe>
+          </aside>
+        </section>
+        <p class="map-sources"><strong>Sources —</strong> Opérations programmées ANAH en cours, BAN IGN, DREAL Bretagne, ANCT, INSEE. Les données sont filtrées à l’échelle de la Bretagne et pour un seul opérateur. Minihi est un prototype. Les adresses saisies ne sont pas conservées.</p>
+      </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="./streetview-config.js?v=20260829-2"></script>
+    <script src="./app.js?v=20260829-1"></script>
+    <script src="./complements.js?v=20260829-1"></script>
+    <script src="./streetview.js?v=20260829-2"></script>
+  </body>
+</html>
