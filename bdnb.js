@@ -131,18 +131,24 @@
     if (availableValue(building.classe_bilan_dpe)) {
       rows.push({ label: "DPE représentatif", value: building.classe_bilan_dpe });
     }
-    if (Number.isFinite(Number(building.emission_ges_5_usages_m2))) {
+    const gesValue = availableValue(building.emission_ges_5_usages_m2)
+      ? Number(building.emission_ges_5_usages_m2)
+      : NaN;
+    if (Number.isFinite(gesValue)) {
       rows.push({
         label: "Émissions GES",
-        value: `${Number(building.emission_ges_5_usages_m2).toLocaleString("fr-FR", {
+        value: `${gesValue.toLocaleString("fr-FR", {
           maximumFractionDigits: 1,
         })} kgCO₂e/m²/an`,
       });
     }
-    if (Number.isFinite(Number(building.surface_emprise_sol))) {
+    const footprintArea = availableValue(building.surface_emprise_sol)
+      ? Number(building.surface_emprise_sol)
+      : NaN;
+    if (Number.isFinite(footprintArea)) {
       rows.push({
         label: "Emprise au sol",
-        value: `${Math.round(Number(building.surface_emprise_sol)).toLocaleString("fr-FR")} m²`,
+        value: `${Math.round(footprintArea).toLocaleString("fr-FR")} m²`,
       });
     }
 
