@@ -277,6 +277,12 @@ async function locatePoint(longitude, latitude, label, knownCityCode = "") {
 
   if (matches.length) showFound(label, matches, complementaryRows);
   else showOutside(label, complementaryRows);
+
+  window.dispatchEvent(
+    new CustomEvent("minihi:result-rendered", {
+      detail: { longitude, latitude, label },
+    }),
+  );
 }
 
 function selectSuggestion(index) {

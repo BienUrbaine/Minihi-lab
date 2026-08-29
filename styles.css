@@ -473,6 +473,23 @@ h1 {
   border-top: 1px solid rgba(65, 108, 73, 0.16);
 }
 
+.building-info {
+  margin-top: 18px;
+  padding-top: 17px;
+  border-top: 1px solid rgba(65, 108, 73, 0.16);
+}
+
+.building-info-status {
+  margin: 0;
+  color: #666a6c;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.building-info .commune-row:first-of-type {
+  margin-top: 8px;
+}
+
 .match + .match {
   margin-top: 14px;
   padding-top: 14px;
