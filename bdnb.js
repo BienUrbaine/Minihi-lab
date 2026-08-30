@@ -5,11 +5,20 @@
   const BDNB_FIELDS = [
     "batiment_groupe_id",
     "geom_groupe",
+    "usage_principal_bdnb_open",
     "annee_construction",
     "annee_construction_dpe",
     "classe_bilan_dpe",
     "emission_ges_5_usages_m2",
-    "surface_emprise_sol",
+    "type_energie_chauffage",
+    "type_installation_chauffage",
+    "type_generateur_chauffage_anciennete",
+    "numero_immat_principal",
+    "contrainte_urbanisme_ac1",
+    "indicateur_distance_au_reseau",
+    "batenr_favorabilite_solaire_thermique",
+    "batenr_favorabilite_geothermie_nappe",
+    "batenr_favorabilite_geothermie_sonde",
   ];
 
   let requestController = null;
@@ -103,62 +112,118 @@
     return section;
   }
 
-  function showBuildingStatus(message) {
-    buildingSection().innerHTML = `
-      <p class="field-label">Informations bâtiment</p>
-      <p class="building-info-status">${escapeHtml(message)}</p>
-    `;
-  }
-
   function availableValue(value) {
     return value !== null && value !== undefined && String(value).trim() !== "";
   }
 
-  function renderBuilding(building) {
-    if (!building) {
-      showBuildingStatus("Aucune information BDNB disponible pour cette adresse");
-      return;
-    }
+  function numericValue(value) {
+    if (!availableValue(value)) return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
 
-    const rows = [];
-    const constructionYear = availableValue(building.annee_construction)
-      ? building.annee_construction
-      : building.annee_construction_dpe;
+  function booleanValue(value) {
+    if (value === true || value === "true") return true;
+    if (value === false || value === "false") return false;
+    return null;
+  }
 
-    if (availableValue(constructionYear)) {
-      rows.push({ label: "Construction", value: String(constructionYear) });
-    }
-    if (availableValue(building.classe_bilan_dpe)) {
-      rows.push({ label: "DPE représentatif", value: building.classe_bilan_dpe });
-    }
-    const gesValue = availableValue(building.emission_ges_5_usages_m2)
-      ? Number(building.emission_ges_5_usages_m2)
-      : NaN;
-    if (Number.isFinite(gesValue)) {
-      rows.push({
-        label: "Émissions GES",
-        value: `${gesValue.toLocaleString("fr-FR", {
-          maximumFractionDigits: 1,
-        })} kgCO₂e/m²/an`,
-      });
-    }
-    const footprintArea = availableValue(building.surface_emprise_sol)
-      ? Number(building.surface_emprise_sol)
-      : NaN;
-    if (Number.isFinite(footprintArea)) {
-      rows.push({
-        label: "Emprise au sol",
-        value: `${Math.round(footprintArea).toLocaleString("fr-FR")} m²`,
-      });
-    }
+  function formatEnergy(value) {
+    if (!availableValue(value)) return null;
+    const normalized = String(value).trim().toLowerCase();
+    const labels = {
+      electricite: "Électricité",
+      gaz: "Gaz",
+      fioul: "Fioul",
+      bois: "Bois",
+      charbon: "Charbon",
+      solaire: "Solaire",
+      "reseau de chaleur": "Réseau de chaleur",
+      "reseau de froid": "Réseau de froid",
+      "gpl/butane/propane": "GPL / butane / propane",
+    };
+    return labels[normalized] || String(value).trim();
+  }
 
-    if (!rows.length) {
-      showBuildingStatus("Non disponible");
-      return;
-    }
+  function formatHeating(building) {
+    const energy = formatEnergy(building?.type_energie_chauffage);
+    const installation = availableValue(building?.type_installation_chauffage)
+      ? String(building.type_installation_chauffage).trim().toLowerCase()
+      : null;
+    const rawAge = availableValue(building?.type_generateur_chauffage_anciennete)
+      ? String(building.type_generateur_chauffage_anciennete).trim().toLowerCase()
+      : null;
+    const ageLabels = {
+      "récent(<15ans)": "récent",
+    };
+    const age = rawAge ? ageLabels[rawAge] || rawAge : null;
 
-    const rowsMarkup = rows
-      .slice(0, 4)
+    if (!energy && !installation && !age) return "Inconnu";
+    return [
+      energy || "énergie inconnue",
+      installation || "installation inconnue",
+      age || "ancienneté inconnue",
+    ].join(" · ");
+  }
+
+  function formatCopropriete(building) {
+    return availableValue(building?.numero_immat_principal)
+      ? "Oui"
+      : "Inconnue";
+  }
+
+  function formatHeritage(building) {
+    const constraint = booleanValue(building?.contrainte_urbanisme_ac1);
+    if (constraint === true) return "Abords d’un monument historique";
+    if (constraint === false) return "Aucun périmètre AC1 identifié";
+    return "Inconnu";
+  }
+
+  function formatNetworkDistance(value) {
+    if (!availableValue(value)) return "Inconnu";
+    const normalized = String(value).trim().toLowerCase();
+    const labels = {
+      "supérieur à 400m": "> 400 m",
+      "entre 100 et 200m": "100 à 200 m",
+      "entre 200 et 400m": "200 à 400 m",
+      "inferieure à 100m": "< 100 m",
+      "inférieure à 100m": "< 100 m",
+      "raccordé au reseau de chaleur": "Raccordé",
+      "raccordé au réseau de chaleur": "Raccordé",
+    };
+    return labels[normalized] || String(value).trim();
+  }
+
+  function formatFavorability(value) {
+    const favorability = booleanValue(value);
+    if (favorability === true) return "Favorable";
+    if (favorability === false) return "Défavorable";
+    return "Inconnu";
+  }
+
+  function formatGeothermal(building) {
+    const aquifer = booleanValue(
+      building?.batenr_favorabilite_geothermie_nappe,
+    );
+    const borehole = booleanValue(
+      building?.batenr_favorabilite_geothermie_sonde,
+    );
+
+    if (aquifer === null && borehole === null) return "Inconnue";
+    if (aquifer === true && borehole === true) {
+      return "Favorable sur nappe et sondes";
+    }
+    if (aquifer === true && borehole === false) return "Favorable sur nappe";
+    if (aquifer === false && borehole === true) return "Favorable sur sondes";
+    if (aquifer === false && borehole === false) return "Défavorable";
+    if (aquifer === true) return "Nappe favorable · sondes inconnues";
+    if (borehole === true) return "Sondes favorables · nappe inconnue";
+    if (aquifer === false) return "Nappe défavorable · sondes inconnues";
+    return "Sondes défavorables · nappe inconnue";
+  }
+
+  function rowsMarkup(rows) {
+    return rows
       .map(
         (row) => `
           <div class="commune-row">
@@ -167,11 +232,79 @@
         `,
       )
       .join("");
+  }
+
+  function renderBuilding(building) {
+    const constructionYear =
+      numericValue(building?.annee_construction) ??
+      numericValue(building?.annee_construction_dpe);
+    const ges = numericValue(building?.emission_ges_5_usages_m2);
+    const characteristics = [
+      {
+        label: "Usage",
+        value: availableValue(building?.usage_principal_bdnb_open)
+          ? String(building.usage_principal_bdnb_open).trim()
+          : "Inconnu",
+      },
+      {
+        label: "Année de construction",
+        value: constructionYear === null ? "Inconnue" : String(constructionYear),
+      },
+      {
+        label: "DPE représentatif",
+        value: availableValue(building?.classe_bilan_dpe)
+          ? String(building.classe_bilan_dpe).trim().toUpperCase()
+          : "Inconnu",
+      },
+      {
+        label: "GES estimé",
+        value:
+          ges === null
+            ? "Inconnu"
+            : `${ges.toLocaleString("fr-FR", {
+                maximumFractionDigits: 1,
+              })} kgCO₂e/m²/an`,
+      },
+      { label: "Chauffage", value: formatHeating(building) },
+      { label: "Copropriété", value: formatCopropriete(building) },
+    ];
+    const renovationContext = [
+      { label: "Patrimoine", value: formatHeritage(building) },
+      {
+        label: "Réseau de chaleur",
+        value: formatNetworkDistance(building?.indicateur_distance_au_reseau),
+      },
+      {
+        label: "Solaire thermique",
+        value: formatFavorability(
+          building?.batenr_favorabilite_solaire_thermique,
+        ),
+      },
+      { label: "Géothermie", value: formatGeothermal(building) },
+    ];
 
     buildingSection().innerHTML = `
-      <p class="field-label">Informations bâtiment</p>
-      ${rowsMarkup}
+      <div class="building-block">
+        <p class="field-label">Caractéristiques du bâtiment</p>
+        ${rowsMarkup(characteristics)}
+      </div>
+      <div class="building-block building-context">
+        <p class="field-label">Contexte de rénovation</p>
+        ${rowsMarkup(renovationContext)}
+      </div>
     `;
+  }
+
+  function renderUnknownBuilding() {
+    renderBuilding(null);
+  }
+
+  function renderSelectedBuilding(building) {
+    if (!building) {
+      renderUnknownBuilding();
+      return;
+    }
+    renderBuilding(building);
   }
 
   function endpointUrl(point) {
@@ -193,7 +326,7 @@
     const currentRequest = requestNumber;
     if (requestController) requestController.abort();
     requestController = new AbortController();
-    showBuildingStatus("Chargement des informations BDNB…");
+    renderUnknownBuilding();
 
     const point = longitudeLatitudeToLambert93(longitude, latitude);
 
@@ -205,11 +338,11 @@
       if (!response.ok) throw new Error(`BDNB HTTP ${response.status}`);
       const buildings = await response.json();
       if (currentRequest !== requestNumber) return;
-      renderBuilding(closestBuilding(buildings, point));
+      renderSelectedBuilding(closestBuilding(buildings, point));
     } catch (error) {
       if (error.name === "AbortError" || currentRequest !== requestNumber) return;
       console.warn("Informations BDNB indisponibles", error);
-      showBuildingStatus("Informations bâtiment momentanément indisponibles");
+      renderUnknownBuilding();
     }
   }
 
