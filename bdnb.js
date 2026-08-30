@@ -1,6 +1,8 @@
 (() => {
   const BDNB_ENDPOINT =
     "https://api.bdnb.io/v1/bdnb/donnees/batiment_groupe_complet/bbox";
+  const BDNB_RNC_ENDPOINT =
+    "https://api.bdnb.io/v1/bdnb/donnees/batiment_groupe_rnc";
   const SEARCH_RADIUS_METERS = 30;
   const BDNB_FIELDS = [
     "batiment_groupe_id",
@@ -167,15 +169,27 @@
   }
 
   function formatCopropriete(building) {
-    return availableValue(building?.numero_immat_principal)
-      ? "Oui"
-      : "Inconnue";
+    if (!building) return "Inconnue";
+
+    const registrationNumber = availableValue(
+      building?.rncRecord?.numero_immat_principal,
+    )
+      ? building.rncRecord.numero_immat_principal
+      : building.numero_immat_principal;
+
+    if (availableValue(registrationNumber)) {
+      const totalLots = numericValue(building?.rncRecord?.nb_lot_tot);
+      return totalLots === null ? "Oui" : `Oui · ${totalLots} lots`;
+    }
+
+    if (building.rncLookupCompleted === true) return "Non identifiée";
+    return "Inconnue";
   }
 
   function formatHeritage(building) {
     const constraint = booleanValue(building?.contrainte_urbanisme_ac1);
     if (constraint === true) return "Abords d’un monument historique";
-    if (constraint === false) return "Aucun périmètre AC1 identifié";
+    if (constraint === false) return "Hors périmètre AC1";
     return "Inconnu";
   }
 
@@ -184,8 +198,8 @@
     const normalized = String(value).trim().toLowerCase();
     const labels = {
       "supérieur à 400m": "> 400 m",
-      "entre 100 et 200m": "100 à 200 m",
-      "entre 200 et 400m": "200 à 400 m",
+      "entre 100 et 200m": "100–200 m",
+      "entre 200 et 400m": "200–400 m",
       "inferieure à 100m": "< 100 m",
       "inférieure à 100m": "< 100 m",
       "raccordé au reseau de chaleur": "Raccordé",
@@ -321,6 +335,40 @@
     return `${BDNB_ENDPOINT}?${parameters}`;
   }
 
+  function rncEndpointUrl(buildingId) {
+    const parameters = new URLSearchParams({
+      batiment_groupe_id: `eq.${buildingId}`,
+      select: "numero_immat_principal,nb_lot_tot",
+      limit: "1",
+    });
+    return `${BDNB_RNC_ENDPOINT}?${parameters}`;
+  }
+
+  async function enrichWithRnc(building, signal) {
+    if (!availableValue(building?.batiment_groupe_id)) return building;
+
+    try {
+      const response = await fetch(
+        rncEndpointUrl(building.batiment_groupe_id),
+        {
+          signal,
+          headers: { Accept: "application/json" },
+        },
+      );
+      if (!response.ok) throw new Error(`BDNB RNC HTTP ${response.status}`);
+      const records = await response.json();
+      return {
+        ...building,
+        rncLookupCompleted: true,
+        rncRecord: Array.isArray(records) ? records[0] || null : null,
+      };
+    } catch (error) {
+      if (error.name === "AbortError") throw error;
+      console.warn("Informations RNC indisponibles", error);
+      return building;
+    }
+  }
+
   async function loadBuilding(longitude, latitude) {
     requestNumber += 1;
     const currentRequest = requestNumber;
@@ -338,7 +386,17 @@
       if (!response.ok) throw new Error(`BDNB HTTP ${response.status}`);
       const buildings = await response.json();
       if (currentRequest !== requestNumber) return;
-      renderSelectedBuilding(closestBuilding(buildings, point));
+      const selectedBuilding = closestBuilding(buildings, point);
+      if (!selectedBuilding) {
+        renderUnknownBuilding();
+        return;
+      }
+      const enrichedBuilding = await enrichWithRnc(
+        selectedBuilding,
+        requestController.signal,
+      );
+      if (currentRequest !== requestNumber) return;
+      renderSelectedBuilding(enrichedBuilding);
     } catch (error) {
       if (error.name === "AbortError" || currentRequest !== requestNumber) return;
       console.warn("Informations BDNB indisponibles", error);
