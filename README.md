@@ -2,6 +2,8 @@
 
 Carte web de consultation des périmètres d’aide au logement.
 
+Prototype de démonstration — © Bien Rurbaine 2026 — Tous droits réservés. Réutilisation ou redistribution sans autorisation interdite.
+
 ## Carte publique
 
 [Ouvrir la carte Minihi](https://bienurbaine.github.io/Minihi/)
