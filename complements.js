@@ -118,68 +118,22 @@ function formatZonage123(value) {
   return labels[String(value)] || String(value ?? "").trim();
 }
 
-function buildComplementaryRows(point, citycode) {
-  const rows = [];
-
-  const qpvNames = complementaryData.qpv
-    .filter((feature) => featureContainsPoint(feature, point))
-    .map((feature) => String(feature.properties?.lib_qp || "").trim())
-    .filter(Boolean);
-
-  const uniqueQpvNames = [...new Set(qpvNames)];
-  if (uniqueQpvNames.length) {
-    rows.push({
-      label: "QPV",
-      value: `Oui — ${uniqueQpvNames.join(", ")}`,
-    });
-  }
-
-  if (citycode && Object.prototype.hasOwnProperty.call(complementaryData.abc, citycode)) {
-    rows.push({
-      label: "Zone ABC",
-      value: String(complementaryData.abc[citycode]),
-    });
-  }
-
-  if (
+function zonagesValue(citycode) {
+  const hasAbc =
     citycode &&
-    Object.prototype.hasOwnProperty.call(complementaryData.zonage123, citycode)
-  ) {
-    rows.push({
-      label: "Zone I-II-III",
-      value: formatZonage123(complementaryData.zonage123[citycode]),
-    });
-  }
+    Object.prototype.hasOwnProperty.call(complementaryData.abc, citycode);
+  const hasZonage123 =
+    citycode &&
+    Object.prototype.hasOwnProperty.call(complementaryData.zonage123, citycode);
 
-  if (citycode && complementaryData.denormandie.has(citycode)) {
-    rows.push({
-      label: "Denormandie",
-      value: "Commune éligible",
-    });
-  }
+  const abc = hasAbc
+    ? String(complementaryData.abc[citycode]).trim()
+    : "zone ABC inconnue";
+  const zonage123 = hasZonage123
+    ? formatZonage123(complementaryData.zonage123[citycode])
+    : "zone I-II-III inconnue";
 
-  return rows;
-}
-
-function complementaryMarkup(rows) {
-  if (!rows.length) return "";
-
-  const rowsMarkup = rows
-    .map(
-      (row) => `
-        <div class="commune-row">
-          <span><strong>${escapeHtml(row.label)} :</strong> ${escapeHtml(row.value)}</span>
-        </div>
-      `,
-    )
-    .join("");
-
-  return `
-    <div class="matches">
-      <p class="field-label">Informations complémentaires</p>
-      ${rowsMarkup}
-    </div>
-  `;
+  return `${abc || "zone ABC inconnue"} · ${zonage123 || "zone I-II-III inconnue"}`;
 }
 
 /*
@@ -205,7 +159,7 @@ function normalizeSuggestion(raw) {
   };
 }
 
-function showFound(label, matches, complementaryRows = []) {
+function showFound(label, matches, zonages = "Inconnues") {
   const matchMarkup = matches
     .map(
       (feature) => `
@@ -215,6 +169,7 @@ function showFound(label, matches, complementaryRows = []) {
           <div class="commune-row"><span><strong>Type :</strong> ${escapeHtml(deviceType(feature))}</span></div>
           <div class="commune-row"><span><strong>Période :</strong> ${escapeHtml(dateRange(feature))}</span></div>
           <div class="commune-row"><span><strong>Maître d’ouvrage :</strong> ${escapeHtml(projectOwner(feature))}</span></div>
+          <div class="commune-row"><span><strong>Zones :</strong> ${escapeHtml(zonages)}</span></div>
         </article>
       `,
     )
@@ -231,11 +186,10 @@ function showFound(label, matches, complementaryRows = []) {
     </div>
     <p class="address-confirmed">${escapeHtml(label)}</p>
     <div class="matches">${matchMarkup}</div>
-    ${complementaryMarkup(complementaryRows)}
   `;
 }
 
-function showOutside(label, complementaryRows = []) {
+function showOutside(label, zonages = "Inconnues") {
   resultBox.className = "result result-outside";
   resultBox.innerHTML = `
     <div class="result-heading">
@@ -247,7 +201,16 @@ function showOutside(label, complementaryRows = []) {
     </div>
     <p class="address-confirmed">${escapeHtml(label)}</p>
     <p class="outside-copy">Le point recherché ne se situe dans aucun des périmètres actuellement publiés.</p>
-    ${complementaryMarkup(complementaryRows)}
+    <div class="matches">
+      <article class="match">
+        <p class="field-label">Dispositif</p>
+        <p class="device-name">Aucun dispositif applicable</p>
+        <div class="commune-row"><span><strong>Type :</strong> Inconnu</span></div>
+        <div class="commune-row"><span><strong>Période :</strong> Inconnue</span></div>
+        <div class="commune-row"><span><strong>Maître d’ouvrage :</strong> Inconnu</span></div>
+        <div class="commune-row"><span><strong>Zones :</strong> ${escapeHtml(zonages)}</span></div>
+      </article>
+    </div>
   `;
 }
 
@@ -273,10 +236,10 @@ async function locatePoint(longitude, latitude, label, knownCityCode = "") {
 
   await complementaryLoadPromise;
   const citycode = await resolveCityCode(longitude, latitude, knownCityCode);
-  const complementaryRows = buildComplementaryRows(point, citycode);
+  const zonages = zonagesValue(citycode);
 
-  if (matches.length) showFound(label, matches, complementaryRows);
-  else showOutside(label, complementaryRows);
+  if (matches.length) showFound(label, matches, zonages);
+  else showOutside(label, zonages);
 
   window.dispatchEvent(
     new CustomEvent("minihi:result-rendered", {
