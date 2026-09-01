@@ -1,0 +1,93 @@
+name: Warm map once
+
+on:
+  push:
+    paths:
+      - ".github/workflows/warm-map-once.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply warm qualitative palette and grayscale OSM
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f"Motif introuvable pour {label}")
+              return text.replace(old, new, 1)
+
+          app_path = Path("app.js")
+          app = app_path.read_text(encoding="utf-8")
+          app = replace_once(
+              app,
+              '''const PERIMETER_STYLES = {
+            "OPAH-RU": { color: "#34235f", fillColor: "#46327e" },
+            PIG: { color: "#27466e", fillColor: "#365c8d" },
+            "OPAH-D": { color: "#147b68", fillColor: "#1fa187" },
+            POPAC: { color: "#328c50", fillColor: "#4ac16d" },
+          };
+
+          const DEFAULT_PERIMETER_STYLE = { color: "#475159", fillColor: "#66737a" };''',
+              '''const PERIMETER_STYLES = {
+            "OPAH-RU": { color: "#67274e", fillColor: "#9a3f75" },
+            PIG: { color: "#8f3034", fillColor: "#c94b50" },
+            "OPAH-D": { color: "#a6531c", fillColor: "#e07a32" },
+            POPAC: { color: "#916d13", fillColor: "#d2a12a" },
+            OPAH: { color: "#7b3c24", fillColor: "#b85c38" },
+            "PACTE TERRITORIAL": { color: "#733939", fillColor: "#a85858" },
+            "OPAH-CD": { color: "#933a4a", fillColor: "#d65a6f" },
+            "OPAH-RR": { color: "#805816", fillColor: "#c48a2a" },
+          };
+
+          const DEFAULT_PERIMETER_STYLE = { color: "#744637", fillColor: "#b06d52" };''',
+              "palette",
+          )
+          app = replace_once(app, "    fillOpacity: 0.2,", "    fillOpacity: 0.28,", "opacité des périmètres")
+          app = replace_once(app, "    fillOpacity: 0.34,", "    fillOpacity: 0.42,", "opacité au survol")
+          app = replace_once(app, '      fillColor: "#59656d",\n      fillOpacity: 0.28,', '      fillColor: "#666b70",\n      fillOpacity: 0.2,', "masque extérieur")
+          app_path.write_text(app, encoding="utf-8")
+
+          styles_path = Path("styles.css")
+          styles = styles_path.read_text(encoding="utf-8")
+          replacements = {
+              '.legend-opah-ru { border-color: #34235f; background: rgba(70, 50, 126, 0.28); }': '.legend-opah-ru { border-color: #67274e; background: rgba(154, 63, 117, 0.32); }',
+              '.legend-pig { border-color: #27466e; background: rgba(54, 92, 141, 0.28); }': '.legend-pig { border-color: #8f3034; background: rgba(201, 75, 80, 0.32); }',
+              '.legend-opah-d { border-color: #147b68; background: rgba(31, 161, 135, 0.28); }': '.legend-opah-d { border-color: #a6531c; background: rgba(224, 122, 50, 0.32); }',
+              '.legend-popac { border-color: #328c50; background: rgba(74, 193, 109, 0.28); }': '.legend-popac { border-color: #916d13; background: rgba(210, 161, 42, 0.32); }',
+          }
+          for old, new in replacements.items():
+              styles = replace_once(styles, old, new, old)
+          marker = "/* Grayscale OSM base */"
+          if marker not in styles:
+              styles += '''
+
+          /* Grayscale OSM base */
+          .leaflet-tile-pane {
+            filter: grayscale(0.92) saturate(0.2) brightness(1.04) contrast(0.96);
+          }
+          '''
+          styles_path.write_text(styles, encoding="utf-8")
+
+          index_path = Path("index.html")
+          index = index_path.read_text(encoding="utf-8")
+          index = replace_once(index, "./styles.css?v=20260901-5", "./styles.css?v=20260901-6", "cache CSS")
+          index = replace_once(index, "./app.js?v=20260901-4", "./app.js?v=20260901-5", "cache JS")
+          index_path.write_text(index, encoding="utf-8")
+          PY
+      - name: Validate JavaScript syntax
+        run: node --check app.js
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js styles.css index.html
+          git diff --cached --check
+          git commit -m "Réchauffe la symbologie cartographique"
+          git push
