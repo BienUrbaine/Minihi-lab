@@ -59,8 +59,8 @@ L.control
 const markerIcon = L.divIcon({
   className: "",
   html: '<div class="address-marker"></div>',
-  iconSize: [34, 40],
-  iconAnchor: [17, 38],
+  iconSize: [24, 28],
+  iconAnchor: [12, 27],
 });
 
 let features = [];
@@ -294,8 +294,8 @@ function locatePoint(longitude, latitude, label) {
   } else {
     addressMarker = L.marker([latitude, longitude], { icon: markerIcon }).addTo(map);
   }
-  addressMarker.bindTooltip(label, { direction: "top", offset: [0, -30] });
-  map.flyTo([latitude, longitude], 16, { duration: 0.75 });
+  addressMarker.bindTooltip(label, { direction: "top", offset: [0, -22] });
+  map.flyTo([latitude, longitude], 15, { duration: 0.75 });
 
   if (matches.length) showFound(label, matches);
   else showOutside(label);

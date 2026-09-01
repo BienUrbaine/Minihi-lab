@@ -225,8 +225,8 @@ async function locatePoint(longitude, latitude, label, knownCityCode = "") {
   } else {
     addressMarker = L.marker([latitude, longitude], { icon: markerIcon }).addTo(map);
   }
-  addressMarker.bindTooltip(label, { direction: "top", offset: [0, -30] });
-  map.flyTo([latitude, longitude], 16, { duration: 0.75 });
+  addressMarker.bindTooltip(label, { direction: "top", offset: [0, -22] });
+  map.flyTo([latitude, longitude], 15, { duration: 0.75 });
 
   window.dispatchEvent(
     new CustomEvent("minihi:address-selected", {

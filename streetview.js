@@ -3,6 +3,7 @@
   const EMBED_ENDPOINT = "https://www.google.com/maps/embed/v1/streetview";
 
   const openButton = document.querySelector("#street-view-open");
+  const openButtonLabel = openButton?.querySelector(".street-view-trigger-label");
   const panel = document.querySelector("#street-view-panel");
   const closeButton = document.querySelector("#street-view-close");
   const addressLabel = document.querySelector("#street-view-address");
@@ -37,12 +38,13 @@
   function openPanel() {
     panel.hidden = false;
     openButton.setAttribute("aria-expanded", "true");
-    closeButton.focus({ preventScroll: true });
+    if (openButtonLabel) openButtonLabel.textContent = "Masquer Street View";
   }
 
   function closePanel() {
     panel.hidden = true;
     openButton.setAttribute("aria-expanded", "false");
+    if (openButtonLabel) openButtonLabel.textContent = "Voir dans Street View";
     frame.hidden = true;
     frame.removeAttribute("src");
     openButton.focus({ preventScroll: true });
@@ -81,6 +83,11 @@
     showFrame(embedUrl(selectedLocation, key));
   }
 
+  function toggleStreetView() {
+    if (panel.hidden) loadStreetView();
+    else closePanel();
+  }
+
   window.addEventListener("minihi:address-selected", (event) => {
     const longitude = Number(event.detail?.longitude);
     const latitude = Number(event.detail?.latitude);
@@ -96,7 +103,7 @@
     if (!panel.hidden && !openButton.hidden) loadStreetView();
   });
 
-  openButton.addEventListener("click", loadStreetView);
+  openButton.addEventListener("click", toggleStreetView);
   closeButton.addEventListener("click", closePanel);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !panel.hidden) closePanel();
