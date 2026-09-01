@@ -44,17 +44,6 @@ jobs:
       - name: Récupérer le site
         uses: actions/checkout@v6
 
-      - name: Générer la configuration Street View
-        env:
-          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
-        run: |
-          cat > streetview-config.js <<EOF
-          /* Fichier généré au déploiement. Ne pas y stocker de secret durablement. */
-          window.MINIHI_CONFIG = Object.freeze({
-            googleMapsApiKey: "${GOOGLE_MAPS_API_KEY:-REMPLACER_PAR_LA_CLE_GOOGLE_MAPS}",
-          });
-          EOF
-
       - name: Configurer GitHub Pages
         uses: actions/configure-pages@v5
 
