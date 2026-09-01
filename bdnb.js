@@ -4,6 +4,7 @@
   const BDNB_RNC_ENDPOINT =
     "https://api.bdnb.io/v1/bdnb/donnees/batiment_groupe_rnc";
   const SEARCH_RADIUS_METERS = 30;
+  const CANDIDATE_PAGE_SIZE = 10;
   const BDNB_FIELDS = [
     "batiment_groupe_id",
     "geom_groupe",
@@ -99,14 +100,39 @@
     return Infinity;
   }
 
+  function geometryContainsPoint(point, geometry) {
+    if (geometry?.type === "Polygon") {
+      return polygonContainsPoint(geometry.coordinates, point);
+    }
+    if (geometry?.type === "MultiPolygon") {
+      return geometry.coordinates.some((polygon) =>
+        polygonContainsPoint(polygon, point),
+      );
+    }
+    return false;
+  }
+
   function closestBuilding(buildings, point) {
     return buildings
       .map((building) => ({
         building,
+        containsPoint: geometryContainsPoint(point, building.geom_groupe),
         distance: distanceToGeometry(point, building.geom_groupe),
       }))
       .filter((candidate) => Number.isFinite(candidate.distance))
-      .sort((left, right) => left.distance - right.distance)[0]?.building;
+      .sort((left, right) => {
+        if (left.containsPoint !== right.containsPoint) {
+          return left.containsPoint ? -1 : 1;
+        }
+        if (left.distance !== right.distance) {
+          return left.distance - right.distance;
+        }
+        const leftId = String(left.building.batiment_groupe_id || "");
+        const rightId = String(right.building.batiment_groupe_id || "");
+        if (leftId < rightId) return -1;
+        if (leftId > rightId) return 1;
+        return 0;
+      })[0]?.building;
   }
 
   function buildingSection() {
@@ -385,7 +411,7 @@
     renderBuilding(building);
   }
 
-  function endpointUrl(point) {
+  function endpointUrl(point, offset = 0) {
     const [x, y] = point;
     const parameters = new URLSearchParams({
       xmin: String(x - SEARCH_RADIUS_METERS),
@@ -394,9 +420,40 @@
       ymax: String(y + SEARCH_RADIUS_METERS),
       srid: "2154",
       select: BDNB_FIELDS.join(","),
-      limit: "10",
+      limit: String(CANDIDATE_PAGE_SIZE),
+      offset: String(offset),
+      order: "batiment_groupe_id.asc",
     });
     return `${BDNB_ENDPOINT}?${parameters}`;
+  }
+
+  async function fetchCandidateBuildings(point, signal) {
+    const buildings = [];
+    const buildingIds = new Set();
+
+    for (let offset = 0; ; offset += CANDIDATE_PAGE_SIZE) {
+      const response = await fetch(endpointUrl(point, offset), {
+        signal,
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`BDNB HTTP ${response.status}`);
+
+      const page = await response.json();
+      if (!Array.isArray(page)) break;
+
+      let addedBuildings = 0;
+      page.forEach((building) => {
+        const buildingId = String(building?.batiment_groupe_id || "");
+        if (!buildingId || buildingIds.has(buildingId)) return;
+        buildingIds.add(buildingId);
+        buildings.push(building);
+        addedBuildings += 1;
+      });
+
+      if (page.length < CANDIDATE_PAGE_SIZE || addedBuildings === 0) break;
+    }
+
+    return buildings;
   }
 
   function rncEndpointUrl(buildingId) {
@@ -443,12 +500,10 @@
     const point = longitudeLatitudeToLambert93(longitude, latitude);
 
     try {
-      const response = await fetch(endpointUrl(point), {
-        signal: requestController.signal,
-        headers: { Accept: "application/json" },
-      });
-      if (!response.ok) throw new Error(`BDNB HTTP ${response.status}`);
-      const buildings = await response.json();
+      const buildings = await fetchCandidateBuildings(
+        point,
+        requestController.signal,
+      );
       if (currentRequest !== requestNumber) return;
       const selectedBuilding = closestBuilding(buildings, point);
       if (!selectedBuilding) {
