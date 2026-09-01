@@ -1,46 +1,73 @@
 # Minihi
 
-Carte web de consultation des périmètres d’aide au logement.
+Prototype web de préqualification d’un logement à partir de son adresse.
 
-Prototype de démonstration — © Bien Rurbaine 2026 — Tous droits réservés. Réutilisation ou redistribution sans autorisation interdite.
+Minihi permet de consulter l’éligibilité d’un logement à un dispositif
+d’accompagnement — rénovation, réhabilitation ou restauration — et de
+rassembler dans une même interface les principales informations disponibles
+sur les caractéristiques, l’enveloppe et le contexte du bâtiment.
 
-## Carte publique
+**Prototype de démonstration — © Bien Rurbaine 2026 — Tous droits réservés.
+Réutilisation ou redistribution sans autorisation interdite.**
 
-[Ouvrir la carte Minihi](https://bienurbaine.github.io/Minihi/)
+## Démonstrateur
+
+[Ouvrir Minihi-lab](https://bienurbaine.github.io/Minihi-lab/)
 
 ## Fonctionnalités
 
-- recherche d’adresse via le service public IGN / Géoplateforme ;
-- affichage des opérations programmées de l’Anah en cours, filtrées à l’échelle de la Bretagne et pour un opérateur ;
-- test spatial dans le navigateur ;
+- recherche d’adresse via BAN / Géoplateforme (IGN) ;
+- localisation dans les opérations programmées de l’Anah en cours en Bretagne lorsque la source fournit un périmètre géographique exploitable ;
+- distinction cartographique des principaux types d’opérations (OPAH-RU, PIG, OPAH-D, POPAC) ;
 - affichage du dispositif, de sa période et de son maître d’ouvrage ;
-- panneau Google Street View chargé à la demande pour l’adresse sélectionnée.
+- consultation des zonages territoriaux intégrés au prototype ;
+- rapprochement avec la BDNB Open et affichage des principales informations disponibles sur le bâtiment : usage, année, DPE, GES, chauffage et copropriété ;
+- informations disponibles sur l’enveloppe : murs, planchers, toiture, vitrage, menuiseries et ventilation ;
+- éléments de contexte de rénovation : patrimoine, réseau de chaleur, solaire thermique et géothermie ;
+- cartographie Leaflet sur fond OpenStreetMap, avec mise en évidence de la Bretagne ;
+- vue Google Street View chargée à la demande pour l’adresse sélectionnée.
 
-## Données
+## Sources et périmètre
 
-La couche publiée est issue du jeu de données « Liste des opérations programmées de l’Anah en cours et terminées » diffusé sur data.gouv.fr. Elle ne contient que les opérations en cours retenues pour le prototype.
+Les principales sources mobilisées sont :
 
-## Publication
+- opérations programmées de l’Anah en cours : jeu « Liste des opérations programmées de l’Anah en cours et terminées » diffusé sur data.gouv.fr ;
+- BAN / Géoplateforme (IGN) pour la recherche d’adresse ;
+- DREAL Bretagne, ANCT et INSEE pour les zonages intégrés au prototype ;
+- BDNB Open pour les informations disponibles sur le bâtiment ;
+- API Découpage administratif (geo.api.gouv.fr) pour le contour régional utilisé par la carte.
 
-Le site est statique et conçu pour GitHub Pages. Ouvrir `index.html` via un serveur HTTP local pour le tester.
+Le périmètre d’analyse est la Bretagne. La couverture cartographique des
+opérations Anah dépend de la présence d’une géométrie Polygon ou MultiPolygon
+exploitable dans la donnée source. Une opération sans géométrie n’est pas
+artificiellement reconstituée.
+
+## Architecture
+
+Minihi est une application statique en HTML, CSS et JavaScript. Les données
+territoriales nécessaires au prototype sont stockées localement et chargées
+dans le navigateur. Les services externes sont interrogés uniquement pour les
+fonctions qui le nécessitent, notamment la recherche d’adresse, la BDNB et
+Street View.
+
+L’application est conçue pour être déployée comme un site web statique et peut
+également être testée via un serveur HTTP local.
+
+Le script `scripts/update_anah_perimeters.py` permet de régénérer
+`data/perimetres.geojson` à partir de la source nationale Anah en conservant
+les opérations actives en Bretagne, tous opérateurs confondus. Les quelques
+périmètres identifiés comme erronés dans la source sont explicitement exclus
+lors de cette préparation.
 
 ## Configuration de Google Street View
 
-Street View utilise exclusivement Maps Embed API en mode `streetview`. La clé
-Google Maps Platform est isolée dans `streetview-config.js`.
+Street View utilise Maps Embed API en mode `streetview`. La clé Google Maps
+Platform est isolée dans `streetview-config.js`.
 
-1. Créer ou sélectionner un projet dans Google Cloud et lui associer un compte de facturation.
-2. Activer **Maps Embed API**.
-3. Dans **Google Maps Platform > Identifiants**, créer une clé API.
-4. Dans les restrictions d’application, choisir **Sites Web** et autoriser :
-   - `https://bienurbaine.github.io/*`
-   - `http://localhost:*/*` uniquement pendant les tests locaux, puis supprimer cette ligne en production.
-5. Dans les restrictions d’API, limiter la clé uniquement à **Maps Embed API**.
+La clé doit être restreinte au domaine sur lequel Minihi est déployé et limitée
+à **Maps Embed API**. Pour des tests locaux, une origine `localhost` peut être
+autorisée temporairement puis retirée avant mise en production.
 
-La clé est nécessairement visible dans le code d’un site statique. Les
-restrictions de site et d’API sont donc indispensables. L’iframe Street View
-est chargée uniquement à l’ouverture du panneau.
-
-La restriction porte sur l’origine GitHub Pages (`bienurbaine.github.io`) : la
-politique de référent recommandée par Google ne transmet pas le chemin
-`/Minihi/` aux API externes.
+Comme toute clé utilisée côté navigateur dans un site statique, elle reste
+visible dans le code : les restrictions de domaine et d’API sont donc
+indispensables. L’iframe Street View n’est chargée qu’à l’ouverture du panneau.

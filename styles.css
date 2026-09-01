@@ -1013,3 +1013,49 @@ footer {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Minihi categorical map legend */
+.brand {
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.brand:hover {
+  opacity: 0.86;
+}
+
+.brand:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.78);
+  outline-offset: 5px;
+  border-radius: 4px;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  max-width: 300px;
+}
+
+.map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.legend-swatch {
+  width: 13px;
+  height: 10px;
+  border: 2px solid;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+.legend-opah-ru { border-color: #34235f; background: rgba(70, 50, 126, 0.28); }
+.legend-pig { border-color: #27466e; background: rgba(54, 92, 141, 0.28); }
+.legend-opah-d { border-color: #147b68; background: rgba(31, 161, 135, 0.28); }
+.legend-popac { border-color: #328c50; background: rgba(74, 193, 109, 0.28); }

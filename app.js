@@ -9,21 +9,35 @@ const spinner = document.querySelector("#search-spinner");
 const resultBox = document.querySelector("#result");
 const mapStatus = document.querySelector("#map-status");
 
-const perimeterStyle = {
-  stroke: true,
-  color: "#8f2f08",
-  weight: 1.4,
-  opacity: 0.9,
-  fillColor: "#c84a0a",
-  fillOpacity: 0.52,
+const PERIMETER_STYLES = {
+  "OPAH-RU": { color: "#34235f", fillColor: "#46327e" },
+  PIG: { color: "#27466e", fillColor: "#365c8d" },
+  "OPAH-D": { color: "#147b68", fillColor: "#1fa187" },
+  POPAC: { color: "#328c50", fillColor: "#4ac16d" },
 };
 
-const perimeterHoverStyle = {
-  color: "#782300",
-  weight: 2,
-  fillColor: "#d95712",
-  fillOpacity: 0.72,
-};
+const DEFAULT_PERIMETER_STYLE = { color: "#475159", fillColor: "#66737a" };
+
+function styleForFeature(feature) {
+  const type = String(feature?.properties?.Type || "").trim().toUpperCase();
+  const palette = PERIMETER_STYLES[type] || DEFAULT_PERIMETER_STYLE;
+  return {
+    stroke: true,
+    color: palette.color,
+    weight: 2,
+    opacity: 0.96,
+    fillColor: palette.fillColor,
+    fillOpacity: 0.2,
+  };
+}
+
+function hoverStyleForFeature(feature) {
+  return {
+    ...styleForFeature(feature),
+    weight: 2.7,
+    fillOpacity: 0.34,
+  };
+}
 
 function setMapStatus(message = "") {
   mapStatus.textContent = message;
@@ -33,7 +47,7 @@ function setMapStatus(message = "") {
 const map = L.map("map", {
   zoomControl: true,
   scrollWheelZoom: true,
-}).setView([47.92, -3.83], 10);
+}).setView([48.2, -2.8], 7);
 map.attributionControl.setPosition("bottomleft");
 
 const mapElement = document.querySelector("#map");
@@ -48,6 +62,75 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution:
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 }).addTo(map);
+
+map.createPane("regionMaskPane");
+map.getPane("regionMaskPane").style.zIndex = "250";
+map.getPane("regionMaskPane").style.pointerEvents = "none";
+map.createPane("regionOutlinePane");
+map.getPane("regionOutlinePane").style.zIndex = "350";
+map.getPane("regionOutlinePane").style.pointerEvents = "none";
+
+function outerRingsFromGeometry(geometry) {
+  if (!geometry) return [];
+  if (geometry.type === "Polygon") {
+    return geometry.coordinates.length ? [geometry.coordinates[0]] : [];
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates
+      .filter((polygon) => polygon.length)
+      .map((polygon) => polygon[0]);
+  }
+  return [];
+}
+
+async function loadBrittanyMask() {
+  try {
+    const response = await fetch("./data/bretagne.geojson", { cache: "no-store" });
+    if (!response.ok) throw new Error("Contour Bretagne indisponible");
+    const boundary = await response.json();
+    const rings = outerRingsFromGeometry(boundary.geometry).map((ring) =>
+      ring.map(([longitude, latitude]) => [latitude, longitude]),
+    );
+    if (!rings.length) throw new Error("Contour Bretagne vide");
+
+    const worldRing = [
+      [-85.05112878, -180],
+      [-85.05112878, 180],
+      [85.05112878, 180],
+      [85.05112878, -180],
+      [-85.05112878, -180],
+    ];
+
+    L.polygon([worldRing, ...rings], {
+      pane: "regionMaskPane",
+      interactive: false,
+      stroke: false,
+      fill: true,
+      fillColor: "#59656d",
+      fillOpacity: 0.28,
+      fillRule: "evenodd",
+    }).addTo(map);
+
+    const outline = L.geoJSON(boundary, {
+      pane: "regionOutlinePane",
+      interactive: false,
+      style: {
+        color: "#556169",
+        weight: 1.25,
+        opacity: 0.68,
+        fill: false,
+      },
+    }).addTo(map);
+
+    if (outline.getBounds().isValid()) {
+      map.fitBounds(outline.getBounds(), { padding: [28, 28], maxZoom: 8 });
+    }
+  } catch (error) {
+    console.warn("Masque Bretagne non chargé :", error);
+  }
+}
+
+loadBrittanyMask();
 
 L.control
   .scale({
@@ -144,7 +227,7 @@ loadPerimeters()
   .then((data) => {
     features = data.features || [];
     perimeterLayer = L.geoJSON(data, {
-      style: perimeterStyle,
+      style: styleForFeature,
       onEachFeature(feature, layer) {
         layer.bindPopup(popupContent(feature));
         layer.bindTooltip(deviceName(feature), {
@@ -154,23 +237,17 @@ loadPerimeters()
         });
         layer.on({
           mouseover() {
-            layer.setStyle(perimeterHoverStyle);
+            layer.setStyle(hoverStyleForFeature(feature));
             layer.bringToFront();
           },
           mouseout() {
-            layer.setStyle(perimeterStyle);
+            layer.setStyle(styleForFeature(feature));
           },
         });
       },
     }).addTo(map);
-    if (perimeterLayer.getBounds().isValid()) {
-      map.fitBounds(perimeterLayer.getBounds(), { padding: [28, 28] });
-    }
     window.setTimeout(() => {
       map.invalidateSize({ pan: false });
-      if (perimeterLayer.getBounds().isValid()) {
-        map.fitBounds(perimeterLayer.getBounds(), { padding: [28, 28] });
-      }
     }, 120);
     setMapStatus();
   })
