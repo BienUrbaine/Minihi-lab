@@ -295,10 +295,27 @@
 
   function envelopeValue(value, fallback) {
     if (!availableValue(value)) return fallback;
-    const text = String(value).trim();
-    return /^inconnue?$/i.test(text) ? fallback : text;
-  }
+    const rawText = String(value).trim();
+    if (/^inconnue?$/i.test(rawText)) return fallback;
 
+    const accentCorrections = [
+      [/\bnon isole\b/gi, "non isolé"],
+      [/\bisole\b/gi, "isolé"],
+      [/\bmecanique\b/gi, "mécanique"],
+      [/\breglable\b/gi, "réglable"],
+      [/\bapres\b/gi, "après"],
+      [/\binterieur\b/gi, "intérieur"],
+      [/\bexterieur\b/gi, "extérieur"],
+      [/\bmetal\b/gi, "métal"],
+    ];
+
+    let text = accentCorrections.reduce(
+      (current, [pattern, replacement]) => current.replace(pattern, replacement),
+      rawText,
+    );
+    text = text.replace(/\bpvc\b/gi, "PVC");
+    return text.charAt(0).toLocaleUpperCase("fr-FR") + text.slice(1);
+  }
   function renderBuilding(building) {
     const constructionYear =
       numericValue(building?.annee_construction) ??
