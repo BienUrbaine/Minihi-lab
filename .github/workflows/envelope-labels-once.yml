@@ -17,50 +17,46 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
-          def replace_once(text, old, new, label):
-              if old not in text:
-                  raise SystemExit(f"Motif introuvable pour {label}")
-              return text.replace(old, new, 1)
+          import re
 
           bdnb_path = Path("bdnb.js")
           bdnb = bdnb_path.read_text(encoding="utf-8")
-          old = '''  function envelopeValue(value, fallback) {
-    if (!availableValue(value)) return fallback;
-    const text = String(value).trim();
-    return /^inconnue?$/i.test(text) ? fallback : text;
-  }
-'''
-          new = '''  function envelopeValue(value, fallback) {
-    if (!availableValue(value)) return fallback;
-    const rawText = String(value).trim();
-    if (/^inconnue?$/i.test(rawText)) return fallback;
-
-    const accentCorrections = [
-      [/\\bnon isole\\b/gi, "non isolé"],
-      [/\\bisole\\b/gi, "isolé"],
-      [/\\bmecanique\\b/gi, "mécanique"],
-      [/\\breglable\\b/gi, "réglable"],
-      [/\\bapres\\b/gi, "après"],
-      [/\\binterieur\\b/gi, "intérieur"],
-      [/\\bexterieur\\b/gi, "extérieur"],
-      [/\\bmetal\\b/gi, "métal"],
-    ];
-
-    let text = accentCorrections.reduce(
-      (current, [pattern, replacement]) => current.replace(pattern, replacement),
-      rawText,
-    );
-    text = text.replace(/\\bpvc\\b/gi, "PVC");
-    return text.charAt(0).toLocaleUpperCase("fr-FR") + text.slice(1);
-  }
-'''
-          bdnb = replace_once(bdnb, old, new, "envelopeValue")
+          start = bdnb.index("  function envelopeValue(value, fallback) {")
+          end = bdnb.index("\n  function renderBuilding(building) {", start)
+          new_lines = [
+              "  function envelopeValue(value, fallback) {",
+              "    if (!availableValue(value)) return fallback;",
+              "    const rawText = String(value).trim();",
+              "    if (/^inconnue?$/i.test(rawText)) return fallback;",
+              "",
+              "    const accentCorrections = [",
+              "      [/\\bnon isole\\b/gi, \"non isolé\"],",
+              "      [/\\bisole\\b/gi, \"isolé\"],",
+              "      [/\\bmecanique\\b/gi, \"mécanique\"],",
+              "      [/\\breglable\\b/gi, \"réglable\"],",
+              "      [/\\bapres\\b/gi, \"après\"],",
+              "      [/\\binterieur\\b/gi, \"intérieur\"],",
+              "      [/\\bexterieur\\b/gi, \"extérieur\"],",
+              "      [/\\bmetal\\b/gi, \"métal\"],",
+              "    ];",
+              "",
+              "    let text = accentCorrections.reduce(",
+              "      (current, [pattern, replacement]) => current.replace(pattern, replacement),",
+              "      rawText,",
+              "    );",
+              "    text = text.replace(/\\bpvc\\b/gi, \"PVC\");",
+              "    return text.charAt(0).toLocaleUpperCase(\"fr-FR\") + text.slice(1);",
+              "  }",
+          ]
+          bdnb = bdnb[:start] + "\n".join(new_lines) + bdnb[end:]
           bdnb_path.write_text(bdnb, encoding="utf-8")
 
           index_path = Path("index.html")
           index = index_path.read_text(encoding="utf-8")
-          index = replace_once(index, "./bdnb.js?v=20260901-5", "./bdnb.js?v=20260901-6", "cache BDNB")
+          old_cache = "./bdnb.js?v=20260901-5"
+          if old_cache not in index:
+              raise SystemExit("Version cache BDNB inattendue")
+          index = index.replace(old_cache, "./bdnb.js?v=20260901-6", 1)
           index_path.write_text(index, encoding="utf-8")
           PY
       - name: Validate JavaScript syntax
