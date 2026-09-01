@@ -1,4 +1,4 @@
-name: Inspect ANAH source
+name: Inspect generated ANAH data
 
 on:
   push:
@@ -14,32 +14,33 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - name: Download current ANAH GeoJSON
-        run: |
-          curl -L --fail --retry 3 \
-            'https://www.data.gouv.fr/api/1/datasets/r/1631e896-9670-4db8-92c9-35d6a0daa032' \
-            -o /tmp/anah.geojson
-          ls -lh /tmp/anah.geojson
-      - name: Inspect schema and Brittany-related values
+      - uses: actions/checkout@v4
+      - name: Inspect generated Brittany file
         run: |
           python - <<'PY'
           import json
-          from collections import Counter
-          p='/tmp/anah.geojson'
-          with open(p, encoding='utf-8') as f:
+          from collections import Counter, defaultdict
+          with open('data/perimetres.geojson', encoding='utf-8') as f:
               data=json.load(f)
-          fs=data.get('features',[])
+          fs=data.get('features', [])
+          codes=Counter(str((f.get('properties') or {}).get('Code') or '') for f in fs)
+          dupes={k:v for k,v in codes.items() if k and v>1}
           print('features', len(fs))
-          if not fs:
-              raise SystemExit('No features')
-          props=fs[0].get('properties') or {}
-          print('keys', sorted(props.keys()))
-          print('sample', json.dumps(props, ensure_ascii=False, indent=2)[:12000])
-          # Print likely field distributions for inspection
-          keys=set().union(*[(f.get('properties') or {}).keys() for f in fs[:500]])
-          for k in sorted(keys):
-              lk=k.lower()
-              if any(t in lk for t in ['depart','region','date','etat','statut','maitre','operat','type','label','nom']):
-                  vals=Counter(str((f.get('properties') or {}).get(k)) for f in fs)
-                  print('\nFIELD', k, 'TOP', vals.most_common(20))
+          print('unique_codes', len([k for k in codes if k]))
+          print('duplicate_codes', dupes)
+          by=defaultdict(list)
+          for f in fs:
+              p=f.get('properties') or {}
+              c=str(p.get('Code') or '')
+              if c in dupes:
+                  g=f.get('geometry') or {}
+                  by[c].append({
+                      'Label': p.get('Label'),
+                      'Type': p.get('Type'),
+                      'Departement': p.get('Departement'),
+                      'Operateur': p.get('Operateur'),
+                      'geometry_type': g.get('type'),
+                      'has_coordinates': bool(g.get('coordinates')),
+                  })
+          print(json.dumps(by, ensure_ascii=False, indent=2))
           PY
