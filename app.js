@@ -10,13 +10,17 @@ const resultBox = document.querySelector("#result");
 const mapStatus = document.querySelector("#map-status");
 
 const PERIMETER_STYLES = {
-  "OPAH-RU": { color: "#34235f", fillColor: "#46327e" },
-  PIG: { color: "#27466e", fillColor: "#365c8d" },
-  "OPAH-D": { color: "#147b68", fillColor: "#1fa187" },
-  POPAC: { color: "#328c50", fillColor: "#4ac16d" },
+  "OPAH-RU": { color: "#67274e", fillColor: "#9a3f75" },
+  PIG: { color: "#8f3034", fillColor: "#c94b50" },
+  "OPAH-D": { color: "#a6531c", fillColor: "#e07a32" },
+  POPAC: { color: "#916d13", fillColor: "#d2a12a" },
+  OPAH: { color: "#7b3c24", fillColor: "#b85c38" },
+  "PACTE TERRITORIAL": { color: "#733939", fillColor: "#a85858" },
+  "OPAH-CD": { color: "#933a4a", fillColor: "#d65a6f" },
+  "OPAH-RR": { color: "#805816", fillColor: "#c48a2a" },
 };
 
-const DEFAULT_PERIMETER_STYLE = { color: "#475159", fillColor: "#66737a" };
+const DEFAULT_PERIMETER_STYLE = { color: "#744637", fillColor: "#b06d52" };
 
 function styleForFeature(feature) {
   const type = String(feature?.properties?.Type || "").trim().toUpperCase();
@@ -27,7 +31,7 @@ function styleForFeature(feature) {
     weight: 2,
     opacity: 0.96,
     fillColor: palette.fillColor,
-    fillOpacity: 0.2,
+    fillOpacity: 0.28,
   };
 }
 
@@ -35,7 +39,7 @@ function hoverStyleForFeature(feature) {
   return {
     ...styleForFeature(feature),
     weight: 2.7,
-    fillOpacity: 0.34,
+    fillOpacity: 0.42,
   };
 }
 
@@ -106,8 +110,8 @@ async function loadBrittanyMask() {
       interactive: false,
       stroke: false,
       fill: true,
-      fillColor: "#59656d",
-      fillOpacity: 0.28,
+      fillColor: "#666b70",
+      fillOpacity: 0.2,
       fillRule: "evenodd",
     }).addTo(map);
 

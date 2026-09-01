@@ -1055,7 +1055,13 @@ footer {
   flex: 0 0 auto;
 }
 
-.legend-opah-ru { border-color: #34235f; background: rgba(70, 50, 126, 0.28); }
-.legend-pig { border-color: #27466e; background: rgba(54, 92, 141, 0.28); }
-.legend-opah-d { border-color: #147b68; background: rgba(31, 161, 135, 0.28); }
-.legend-popac { border-color: #328c50; background: rgba(74, 193, 109, 0.28); }
+.legend-opah-ru { border-color: #67274e; background: rgba(154, 63, 117, 0.32); }
+.legend-pig { border-color: #8f3034; background: rgba(201, 75, 80, 0.32); }
+.legend-opah-d { border-color: #a6531c; background: rgba(224, 122, 50, 0.32); }
+.legend-popac { border-color: #916d13; background: rgba(210, 161, 42, 0.32); }
+
+
+/* Grayscale OSM base */
+.leaflet-tile-pane {
+  filter: grayscale(0.92) saturate(0.2) brightness(1.04) contrast(0.96);
+}
