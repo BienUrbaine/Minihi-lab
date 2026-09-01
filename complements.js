@@ -184,7 +184,6 @@ function showFound(label, matches, zonages = "Inconnues") {
         <h2>${matches.length > 1 ? `${matches.length} dispositifs applicables` : "Cette adresse est éligible"}</h2>
       </div>
     </div>
-    <p class="address-confirmed">${escapeHtml(label)}</p>
     <div class="matches">${matchMarkup}</div>
   `;
 }
@@ -199,7 +198,6 @@ function showOutside(label, zonages = "Inconnues") {
         <h2>Aucun dispositif trouvé à cette adresse</h2>
       </div>
     </div>
-    <p class="address-confirmed">${escapeHtml(label)}</p>
     <p class="outside-copy">Le point recherché ne se situe dans aucun des périmètres actuellement publiés.</p>
     <div class="matches">
       <article class="match">
@@ -225,7 +223,6 @@ async function locatePoint(longitude, latitude, label, knownCityCode = "") {
   } else {
     addressMarker = L.marker([latitude, longitude], { icon: markerIcon }).addTo(map);
   }
-  addressMarker.bindTooltip(label, { direction: "top", offset: [0, -22] });
   map.flyTo([latitude, longitude], 15, { duration: 0.75 });
 
   window.dispatchEvent(

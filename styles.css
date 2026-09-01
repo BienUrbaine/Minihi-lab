@@ -595,6 +595,7 @@ h1 {
 }
 
 .map-panel {
+  --street-view-width: clamp(340px, 44%, 500px);
   position: relative;
   flex: 1;
   min-height: 0;
@@ -607,8 +608,7 @@ h1 {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(44%, 500px);
-  min-width: 340px;
+  width: var(--street-view-width);
   border-left: 1px solid rgba(47, 49, 51, 0.14);
   display: flex;
   flex-direction: column;
@@ -703,6 +703,12 @@ h1 {
   width: 100%;
   height: 100%;
   background: #e1e2df;
+}
+
+@media (min-width: 981px) {
+  .map-panel.street-view-visible #map {
+    width: calc(100% - var(--street-view-width));
+  }
 }
 
 .leaflet-container {
@@ -813,7 +819,7 @@ h1 {
 
 .map-legend {
   left: 14px;
-  bottom: 14px;
+  bottom: 32px;
   padding: 8px 11px;
   display: flex;
   gap: 12px;

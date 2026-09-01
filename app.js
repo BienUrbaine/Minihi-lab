@@ -34,6 +34,7 @@ const map = L.map("map", {
   zoomControl: true,
   scrollWheelZoom: true,
 }).setView([47.92, -3.83], 10);
+map.attributionControl.setPosition("bottomleft");
 
 const mapElement = document.querySelector("#map");
 const resizeObserver = new ResizeObserver(() => map.invalidateSize({ pan: false }));
@@ -70,6 +71,14 @@ let requestController = null;
 let debounceTimer = null;
 let suggestionResults = [];
 let activeSuggestionIndex = -1;
+
+window.addEventListener("minihi:map-layout-changed", () => {
+  const currentZoom = map.getZoom();
+  map.invalidateSize({ pan: false });
+  if (addressMarker) {
+    map.setView(addressMarker.getLatLng(), currentZoom, { animate: false });
+  }
+});
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -250,7 +259,6 @@ function showFound(label, matches) {
         <h2>${matches.length > 1 ? `${matches.length} dispositifs applicables` : "Cette adresse est éligible"}</h2>
       </div>
     </div>
-    <p class="address-confirmed">${escapeHtml(label)}</p>
     <div class="matches">${matchMarkup}</div>
   `;
 }
@@ -265,7 +273,6 @@ function showOutside(label) {
         <h2>Aucun dispositif trouvé à cette adresse</h2>
       </div>
     </div>
-    <p class="address-confirmed">${escapeHtml(label)}</p>
     <p class="outside-copy">Le point recherché ne se situe dans aucun des périmètres actuellement publiés.</p>
   `;
 }
@@ -294,7 +301,6 @@ function locatePoint(longitude, latitude, label) {
   } else {
     addressMarker = L.marker([latitude, longitude], { icon: markerIcon }).addTo(map);
   }
-  addressMarker.bindTooltip(label, { direction: "top", offset: [0, -22] });
   map.flyTo([latitude, longitude], 15, { duration: 0.75 });
 
   if (matches.length) showFound(label, matches);

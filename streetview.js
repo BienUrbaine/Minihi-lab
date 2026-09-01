@@ -5,8 +5,8 @@
   const openButton = document.querySelector("#street-view-open");
   const openButtonLabel = openButton?.querySelector(".street-view-trigger-label");
   const panel = document.querySelector("#street-view-panel");
+  const mapPanel = panel?.closest(".map-panel");
   const closeButton = document.querySelector("#street-view-close");
-  const addressLabel = document.querySelector("#street-view-address");
   const statusBox = document.querySelector("#street-view-status");
   const frame = document.querySelector("#street-view-frame");
 
@@ -35,19 +35,34 @@
     frame.hidden = false;
   }
 
+  function notifyMapLayout(open) {
+    mapPanel?.classList.toggle("street-view-visible", open);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        window.dispatchEvent(
+          new CustomEvent("minihi:map-layout-changed", { detail: { open } }),
+        );
+      });
+    });
+  }
+
   function openPanel() {
+    const wasHidden = panel.hidden;
     panel.hidden = false;
     openButton.setAttribute("aria-expanded", "true");
     if (openButtonLabel) openButtonLabel.textContent = "Masquer Street View";
+    if (wasHidden) notifyMapLayout(true);
   }
 
   function closePanel() {
+    const wasOpen = !panel.hidden;
     panel.hidden = true;
     openButton.setAttribute("aria-expanded", "false");
     if (openButtonLabel) openButtonLabel.textContent = "Voir dans Street View";
     frame.hidden = true;
     frame.removeAttribute("src");
     openButton.focus({ preventScroll: true });
+    if (wasOpen) notifyMapLayout(false);
   }
 
   function embedUrl(location, key) {
@@ -71,7 +86,6 @@
 
     const key = apiKey();
     openPanel();
-    addressLabel.textContent = selectedLocation.label;
 
     if (!hasConfiguredKey(key)) {
       showStatus(
