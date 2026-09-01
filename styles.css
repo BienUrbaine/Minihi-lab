@@ -125,6 +125,20 @@ input {
   width: 100%;
 }
 
+.panel-intro + .search-shell {
+  margin-top: -6px;
+}
+
+.intro-kicker {
+  margin: 0 0 3px;
+  color: #806486;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
 .eyebrow {
   margin: 0 0 10px;
   color: #806486;
@@ -137,17 +151,18 @@ input {
 h1 {
   margin: 0;
   color: #333638;
-  font-size: clamp(1.35rem, 2vw, 1.58rem);
+  font-size: clamp(1.22rem, 1.7vw, 1.42rem);
   font-weight: 750;
-  line-height: 1.24;
+  line-height: 1.18;
   letter-spacing: -0.015em;
 }
 
 .intro-copy {
   max-width: 40ch;
-  margin: 8px 0 0;
+  margin: 5px 0 0;
   color: #747779;
-  line-height: 1.45;
+  font-size: 0.9rem;
+  line-height: 1.35;
 }
 
 .search-shell {
