@@ -12,6 +12,12 @@
     "annee_construction_dpe",
     "classe_bilan_dpe",
     "emission_ges_5_usages_m2",
+    "type_isolation_mur_exterieur",
+    "type_isolation_plancher_bas",
+    "type_isolation_plancher_haut",
+    "type_vitrage",
+    "type_materiaux_menuiserie",
+    "type_ventilation",
     "type_energie_chauffage",
     "type_installation_chauffage",
     "type_generateur_chauffage_anciennete",
@@ -261,6 +267,12 @@
       .join("");
   }
 
+  function envelopeValue(value, fallback) {
+    if (!availableValue(value)) return fallback;
+    const text = String(value).trim();
+    return /^inconnue?$/i.test(text) ? fallback : text;
+  }
+
   function renderBuilding(building) {
     const constructionYear =
       numericValue(building?.annee_construction) ??
@@ -295,6 +307,41 @@
       { label: "Chauffage", value: formatHeating(building) },
       { label: "Copropriété", value: formatCopropriete(building) },
     ];
+    const envelope = [
+      {
+        label: "Murs extérieurs",
+        value: envelopeValue(
+          building?.type_isolation_mur_exterieur,
+          "Inconnu",
+        ),
+      },
+      {
+        label: "Plancher bas",
+        value: envelopeValue(building?.type_isolation_plancher_bas, "Inconnu"),
+      },
+      {
+        label: "Plancher haut / toiture",
+        value: envelopeValue(
+          building?.type_isolation_plancher_haut,
+          "Inconnu",
+        ),
+      },
+      {
+        label: "Vitrage",
+        value: envelopeValue(building?.type_vitrage, "Inconnu"),
+      },
+      {
+        label: "Menuiseries",
+        value: envelopeValue(
+          building?.type_materiaux_menuiserie,
+          "Inconnue",
+        ),
+      },
+      {
+        label: "Ventilation",
+        value: envelopeValue(building?.type_ventilation, "Inconnue"),
+      },
+    ];
     const renovationContext = [
       { label: "Patrimoine", value: formatHeritage(building) },
       {
@@ -314,6 +361,10 @@
       <div class="building-block">
         <p class="field-label">Caractéristiques du bâtiment</p>
         ${rowsMarkup(characteristics)}
+      </div>
+      <div class="building-block building-envelope">
+        <p class="field-label">Enveloppe du bâtiment</p>
+        ${rowsMarkup(envelope)}
       </div>
       <div class="building-block building-context">
         <p class="field-label">Contexte de rénovation</p>
