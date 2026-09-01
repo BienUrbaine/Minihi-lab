@@ -441,7 +441,29 @@ h1 {
 }
 
 .result-outside .result-symbol {
+  position: relative;
   background: #777a7c;
+  font-size: 0;
+}
+
+.result-outside .result-symbol::before,
+.result-outside .result-symbol::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 15px;
+  height: 2px;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.result-outside .result-symbol::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.result-outside .result-symbol::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 .result-error .result-symbol {
@@ -532,6 +554,20 @@ h1 {
   justify-content: space-between;
   gap: 10px;
   font-size: 0.88rem;
+}
+
+.value-unknown,
+.value-not-identified {
+  font-style: italic;
+}
+
+.value-unknown {
+  color: #777b7d;
+}
+
+.value-not-identified {
+  color: #5d6163;
+  font-weight: 500;
 }
 
 .fid {

@@ -205,9 +205,9 @@ function showOutside(label, zonages = "Inconnues") {
       <article class="match">
         <p class="field-label">Dispositif</p>
         <p class="device-name">Aucun dispositif applicable</p>
-        <div class="commune-row"><span><strong>Type :</strong> Inconnu</span></div>
-        <div class="commune-row"><span><strong>Période :</strong> Inconnue</span></div>
-        <div class="commune-row"><span><strong>Maître d’ouvrage :</strong> Inconnu</span></div>
+        <div class="commune-row"><span><strong>Type :</strong> <em class="value-unknown">Inconnu</em></span></div>
+        <div class="commune-row"><span><strong>Période :</strong> <em class="value-unknown">Inconnue</em></span></div>
+        <div class="commune-row"><span><strong>Maître d’ouvrage :</strong> <em class="value-unknown">Inconnu</em></span></div>
         <div class="commune-row"><span><strong>Zones :</strong> ${escapeHtml(zonages)}</span></div>
       </article>
     </div>

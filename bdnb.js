@@ -239,11 +239,24 @@
   function rowsMarkup(rows) {
     return rows
       .map(
-        (row) => `
+        (row) => {
+          const value = String(row.value);
+          const valueClass =
+            value === "Inconnu" || value === "Inconnue"
+              ? "value-unknown"
+              : value === "Non identifié" || value === "Non identifiée"
+                ? "value-not-identified"
+                : "";
+          const valueMarkup = valueClass
+            ? `<em class="${valueClass}">${escapeHtml(value)}</em>`
+            : escapeHtml(value);
+
+          return `
           <div class="commune-row">
-            <span><strong>${escapeHtml(row.label)} :</strong> ${escapeHtml(row.value)}</span>
+            <span><strong>${escapeHtml(row.label)} :</strong> ${valueMarkup}</span>
           </div>
-        `,
+        `;
+        },
       )
       .join("");
   }
