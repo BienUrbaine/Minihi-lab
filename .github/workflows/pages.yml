@@ -1,4 +1,4 @@
-name: Publier Kokolanek sur GitHub Pages
+name: Publier Minihi sur GitHub Pages
 
 on:
   push:
@@ -15,7 +15,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    name: Vérifier le prototype
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v6
+
+      - name: Vérifier la syntaxe JavaScript
+        run: |
+          node --check app.js
+          node --check complements.js
+          node --check bdnb.js
+          node --check streetview.js
+          node --check streetview-config.js
+
+      - name: Vérifier le script de mise à jour ANAH
+        run: python -m py_compile scripts/update_anah_perimeters.py
+
   deploy:
+    name: Publier le démonstrateur
+    needs: validate
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -23,6 +43,17 @@ jobs:
     steps:
       - name: Récupérer le site
         uses: actions/checkout@v6
+
+      - name: Générer la configuration Street View
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          cat > streetview-config.js <<EOF
+          /* Fichier généré au déploiement. Ne pas y stocker de secret durablement. */
+          window.MINIHI_CONFIG = Object.freeze({
+            googleMapsApiKey: "${GOOGLE_MAPS_API_KEY:-REMPLACER_PAR_LA_CLE_GOOGLE_MAPS}",
+          });
+          EOF
 
       - name: Configurer GitHub Pages
         uses: actions/configure-pages@v5
