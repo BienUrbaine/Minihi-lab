@@ -1,7 +1,8 @@
-/* Configuration locale de Minihi.
- * En déploiement GitHub Pages, ce fichier est régénéré par le workflow à
- * partir du secret GOOGLE_MAPS_API_KEY.
+/* Configuration Google Maps de Minihi.
+ * Cette clé est utilisée uniquement côté navigateur pour Maps Embed API.
+ * Elle doit rester strictement restreinte au domaine GitHub Pages autorisé
+ * et à l’API Maps Embed dans Google Cloud Console.
  */
 window.MINIHI_CONFIG = Object.freeze({
-  googleMapsApiKey: "REMPLACER_PAR_LA_CLE_GOOGLE_MAPS",
+  googleMapsApiKey: "AIzaSyCMYHBNkXje35XtOmrr5QMFyV7oaKBGxVo",
 });
