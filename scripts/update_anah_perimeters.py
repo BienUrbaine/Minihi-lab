@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sys
+import unicodedata
 from collections import Counter
 from datetime import date
 from pathlib import Path
@@ -17,6 +18,11 @@ from urllib.request import urlopen
 SOURCE_URL = "https://www.data.gouv.fr/api/1/datasets/r/1631e896-9670-4db8-92c9-35d6a0daa032"
 OUTPUT = Path("data/perimetres.geojson")
 BRETON_DEPARTMENTS = {"22", "29", "35", "56"}
+EXCLUDED_OPERATIONS = {
+    "OPAH DURABLE ET SOLIDAIRE DE MORLAIX COMMUNAUTE",
+    "OPAH DES 3 CC PAYS DES ABERS PAYS D'IROISE LESNEVEN COTE DES LEGENDES",
+    "OPAH HAUT LEON COMMUNAUTE",
+}
 
 
 def parse_iso(value):
@@ -26,6 +32,12 @@ def parse_iso(value):
         return date.fromisoformat(str(value)[:10])
     except ValueError:
         return None
+
+
+def normalize_operation_name(value):
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return " ".join(normalized.upper().split())
 
 
 def has_usable_geometry(geometry):
@@ -61,6 +73,8 @@ def main():
         if department not in BRETON_DEPARTMENTS:
             continue
         if start is None or end is None or not (start <= today <= end):
+            continue
+        if normalize_operation_name(props.get("nom")) in EXCLUDED_OPERATIONS:
             continue
 
         geometry = feature.get("geometry")
