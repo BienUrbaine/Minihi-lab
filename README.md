@@ -59,6 +59,23 @@ les opérations actives en Bretagne, tous opérateurs confondus. Les quelques
 périmètres identifiés comme erronés dans la source sont explicitement exclus
 lors de cette préparation.
 
+## Développement et assistance LLM
+
+Minihi est un prototype développé avec l’assistance d’outils fondés sur des
+modèles de langage (LLM), utilisés notamment pour accélérer l’écriture, la
+relecture et l’itération sur le code.
+
+Cette assistance ne remplace pas la définition du besoin, le choix des sources,
+la validation fonctionnelle ni la maintenance du prototype. Le code présent
+dans ce dépôt est relu, testé sur les cas d’usage du démonstrateur et conservé
+dans une architecture volontairement simple afin de faciliter sa compréhension
+et sa reprise par un tiers.
+
+Le dépôt doit être considéré comme un prototype fonctionnel et non comme une
+application de production industrialisée. Une mise en production dans un
+système d’information tiers peut nécessiter des adaptations d’hébergement,
+de sécurité, de supervision, de gestion des secrets et de tests automatisés.
+
 ## Configuration de Google Street View
 
 Street View utilise Maps Embed API en mode `streetview`. La clé Google Maps
@@ -69,5 +86,7 @@ La clé doit être restreinte au domaine sur lequel Minihi est déployé et limi
 autorisée temporairement puis retirée avant mise en production.
 
 Comme toute clé utilisée côté navigateur dans un site statique, elle reste
-visible dans le code : les restrictions de domaine et d’API sont donc
-indispensables. L’iframe Street View n’est chargée qu’à l’ouverture du panneau.
+visible dans le code envoyé au navigateur : les restrictions de domaine et
+d’API sont donc indispensables. Pour une reprise ou une industrialisation, la
+configuration doit être séparée du code source et injectée au déploiement.
+L’iframe Street View n’est chargée qu’à l’ouverture du panneau.
