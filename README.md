@@ -27,7 +27,7 @@ Réutilisation ou redistribution sans autorisation interdite.**
 - cartographie Leaflet sur fond OpenStreetMap, avec mise en évidence de la Bretagne ;
 - vue Google Street View chargée à la demande pour l’adresse sélectionnée.
 
-## Sources et périmètre
+## Sources et périmètres
 
 Les principales sources mobilisées sont :
 
