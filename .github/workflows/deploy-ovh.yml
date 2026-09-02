@@ -1,0 +1,33 @@
+name: Deploy Minihi to OVH
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Déployer vers OVH
+        env:
+          OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+        run: |
+          lftp -u "oxyooza,${OVH_SFTP_PASSWORD}" sftp://ftp.cluster121.hosting.ovh.net:22 <<'EOF'
+          set sftp:auto-confirm yes
+          cd www
+          mirror --reverse --delete --verbose \
+            --exclude-glob '.git/**' \
+            --exclude-glob '.github/**' \
+            --exclude-glob 'README.md' \
+            . .
+          bye
+          EOF
