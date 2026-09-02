@@ -1,4 +1,4 @@
-name: Publier Minihi sur GitHub Pages
+name: Publier Minihi sur GitHub Page
 
 on:
   push:
