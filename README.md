@@ -71,11 +71,6 @@ dans ce dépôt est relu, testé sur les cas d’usage du démonstrateur et cons
 dans une architecture volontairement simple afin de faciliter sa compréhension
 et sa reprise par un tiers.
 
-Le dépôt doit être considéré comme un prototype fonctionnel et non comme une
-application de production industrialisée. Une mise en production dans un
-système d’information tiers peut nécessiter des adaptations d’hébergement,
-de sécurité, de supervision, de gestion des secrets et de tests automatisés.
-
 ## Configuration de Google Street View
 
 Street View utilise Maps Embed API en mode `streetview`. La clé Google Maps
