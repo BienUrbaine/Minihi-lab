@@ -415,9 +415,6 @@
       { label: "GES", field: "ges", value: "Inconnu" },
       { label: "Date du diagnostic", field: "dpe-date", value: "Inconnue" },
       { label: "Surface habitable", field: "dpe-surface", value: "Inconnue" },
-      { label: "Audit énergétique", field: "audit", value: "Inconnu" },
-      { label: "Performance initiale", field: "audit-initial", value: "Inconnue" },
-      { label: "Gain de classes", field: "audit-gain", value: "Inconnu" },
     ];
 
     buildingSection().innerHTML = `
@@ -434,7 +431,7 @@
         ${rowsMarkup(renovationContext)}
       </div>
       <div class="building-block building-renovation">
-        <p class="field-label">Diagnostics et potentiel de rénovation</p>
+        <p class="field-label">Diagnostics énergétiques des logements</p>
         ${rowsMarkup(renovationPotential)}
       </div>
     `;
