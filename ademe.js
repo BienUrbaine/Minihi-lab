@@ -1,8 +1,6 @@
 (() => {
   const DPE_ENDPOINT =
     "https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines";
-  const AUDIT_ENDPOINT =
-    "https://data.ademe.fr/data-fair/api/v1/datasets/audit-opendata/lines";
   const MAX_RESULTS = 200;
   const DPE_FIELDS = [
     "numero_dpe",
@@ -404,19 +402,6 @@
         return;
       }
 
-      const auditRows = await fetchLines(
-        AUDIT_ENDPOINT,
-        "numero_dpe",
-        selection.record.numero_dpe,
-        AUDIT_FIELDS,
-        requestController.signal,
-      );
-      if (currentRequest !== requestNumber) return;
-      renderAudit(
-        summarizeAudit(
-          selectAuditRows(auditRows, selection.record.numero_dpe),
-        ),
-      );
     } catch (error) {
       if (error.name === "AbortError" || currentRequest !== requestNumber) return;
       console.warn("Données ADEME indisponibles", error);
