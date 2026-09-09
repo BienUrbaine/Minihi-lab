@@ -267,6 +267,7 @@
   }
 
   function renderIndividualDpe(record) {
+    setField("dpe-scope", "Maison · diagnostic retenu à l’adresse");
     const diagnosticYear = year(record.date_etablissement_dpe);
     const provenance = diagnosticYear ? ` · ADEME ${diagnosticYear}` : " · ADEME";
     setField("dpe", `${validClass(record.etiquette_dpe)}${provenance}`);
@@ -295,12 +296,13 @@
   }
 
   function renderCollectiveDpe(records) {
+    setField("dpe-scope", "À l’adresse — logement non identifié");
     const count = records.length;
     const prefix = `Synthèse adresse · ${count} diagnostic${count > 1 ? "s" : ""}`;
     const dpeRange = classRange(records, "etiquette_dpe");
     const gesRange = classRange(records, "etiquette_ges");
     setField("dpe", `${prefix}${dpeRange ? ` · ${dpeRange}` : ""} · ADEME`);
-    setField("ges", `${prefix}${gesRange ? ` · ${gesRange}` : ""} · ADEME`);
+    setField("ges", gesRange ? `${prefix} · ${gesRange} · ADEME` : "Inconnu");
     setField("dpe-date", "Inconnue", "Inconnue");
     setField("dpe-surface", "Inconnue", "Inconnue");
   }
@@ -339,9 +341,9 @@
     setField(
       "audit-savings",
       summary.savingsPercent === null
-        ? "Inconnues"
+        ? "Inconnue"
         : `${formatNumber(summary.savingsPercent, 0)} % · ADEME`,
-      "Inconnues",
+      "Inconnue",
     );
   }
 

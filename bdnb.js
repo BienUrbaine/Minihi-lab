@@ -333,15 +333,15 @@
         value: constructionYear === null ? "Inconnue" : String(constructionYear),
       },
       {
-        label: "DPE",
-        field: "dpe",
+        label: "DPE représentatif",
+        field: "bdnb-dpe",
         value: availableValue(building?.classe_bilan_dpe)
           ? `${String(building.classe_bilan_dpe).trim().toUpperCase()} · BDNB`
           : "Inconnu",
       },
       {
-        label: "GES",
-        field: "ges",
+        label: "GES estimé",
+        field: "bdnb-ges",
         value:
           ges === null
             ? "Inconnu"
@@ -349,8 +349,6 @@
                 maximumFractionDigits: 1,
               })} kgCO₂e/m²/an · BDNB`,
       },
-      { label: "Date du diagnostic", field: "dpe-date", value: "Inconnue" },
-      { label: "Surface habitable", field: "dpe-surface", value: "Inconnue" },
       { label: "Chauffage", value: formatHeating(building) },
       { label: "Copropriété", value: formatCopropriete(building) },
     ];
@@ -404,13 +402,18 @@
       { label: "Géothermie", value: formatGeothermal(building) },
     ];
     const renovationPotential = [
+      { label: "Rattachement du DPE", field: "dpe-scope", value: "Inconnu" },
+      { label: "DPE ADEME", field: "dpe", value: "Inconnu" },
+      { label: "GES ADEME", field: "ges", value: "Inconnu" },
+      { label: "Date du diagnostic logement", field: "dpe-date", value: "Inconnue" },
+      { label: "Surface habitable du logement", field: "dpe-surface", value: "Inconnue" },
       { label: "Audit énergétique", field: "audit", value: "Inconnu" },
       { label: "Performance initiale", field: "audit-initial", value: "Inconnue" },
       { label: "Performance après travaux", field: "audit-final", value: "Inconnue" },
       { label: "Gain de classes", field: "audit-gain", value: "Inconnu" },
       { label: "Nature des travaux", field: "audit-works", value: "Inconnue" },
       { label: "Coût estimatif des travaux", field: "audit-cost", value: "Inconnu" },
-      { label: "Économies d’énergie estimées", field: "audit-savings", value: "Inconnues" },
+      { label: "Économie d’énergie estimée", field: "audit-savings", value: "Inconnue" },
     ];
 
     buildingSection().innerHTML = `
@@ -427,7 +430,7 @@
         ${rowsMarkup(renovationContext)}
       </div>
       <div class="building-block building-renovation">
-        <p class="field-label">Potentiel de rénovation</p>
+        <p class="field-label">Diagnostics et potentiel de rénovation</p>
         ${rowsMarkup(renovationPotential)}
       </div>
     `;

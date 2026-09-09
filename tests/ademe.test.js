@@ -9,6 +9,31 @@ const { loadAdeme, selectAuditRows, selectDpe, summarizeAudit } = require("../ad
 const BAN_ID = "29019_1045_00046";
 const TODAY = new Date("2026-09-09T00:00:00Z");
 
+test("la fiche sépare les champs BDNB des diagnostics et conserve tous les inconnus", () => {
+  const vm = require("node:vm");
+  const fs = require("node:fs");
+  const listeners = {};
+  const section = { innerHTML: "" };
+  vm.runInNewContext(fs.readFileSync(require.resolve("../bdnb.js"), "utf8"), {
+    window: { addEventListener(name, fn) { listeners[name] = fn; } },
+    resultBox: { querySelector() { return section; } },
+    escapeHtml: String,
+    AbortController,
+    URLSearchParams,
+    fetch: () => new Promise(() => {}),
+  });
+  listeners["minihi:result-rendered"]({ detail: { longitude: -4.1, latitude: 48 } });
+  const [building, diagnostics] = section.innerHTML.split('building-block building-renovation');
+  assert.match(building, /data-field="bdnb-dpe"/);
+  assert.match(building, /data-field="bdnb-ges"/);
+  assert.doesNotMatch(building, /data-field="dpe"/);
+  for (const field of ["dpe-scope", "dpe", "ges", "dpe-date", "dpe-surface", "audit", "audit-savings"]) {
+    assert.ok(diagnostics.includes('data-field="' + field + '"'));
+  }
+  assert.match(diagnostics, /Diagnostics et potentiel de rénovation/);
+  assert.doesNotMatch(diagnostics, /Inconnues/);
+});
+
 function dpe(overrides = {}) {
   return {
     numero_dpe: "2529E0000001A",
