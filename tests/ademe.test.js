@@ -171,5 +171,6 @@ test("un DPE ADEME individuel fiable est affiché explicitement malgré une dive
     },
   });
   await loadAdeme({ banId: BAN_ID, building: { usage_principal_bdnb_open: "Résidentiel individuel" } });
-  assert.equal(values.dpe, "D · ADEME 2025");
+  assert.equal(values.dpe, "D · 2025");
+  assert.doesNotMatch(Object.values(values).join(" "), /ADEME/);
 });

@@ -269,7 +269,7 @@
   function renderIndividualDpe(record) {
     setField("dpe-scope", "Maison · diagnostic retenu à l’adresse");
     const diagnosticYear = year(record.date_etablissement_dpe);
-    const provenance = diagnosticYear ? ` · ADEME ${diagnosticYear}` : " · ADEME";
+    const provenance = diagnosticYear ? ` · ${diagnosticYear}` : "";
     setField("dpe", `${validClass(record.etiquette_dpe)}${provenance}`);
     setField(
       "ges",
@@ -282,7 +282,7 @@
     setField(
       "dpe-surface",
       surface !== null && surface > 0
-        ? `${formatNumber(surface)} m² · ADEME`
+        ? `${formatNumber(surface)} m²`
         : "Inconnue",
       "Inconnue",
     );
@@ -301,8 +301,8 @@
     const prefix = `Synthèse adresse · ${count} diagnostic${count > 1 ? "s" : ""}`;
     const dpeRange = classRange(records, "etiquette_dpe");
     const gesRange = classRange(records, "etiquette_ges");
-    setField("dpe", `${prefix}${dpeRange ? ` · ${dpeRange}` : ""} · ADEME`);
-    setField("ges", gesRange ? `${prefix} · ${gesRange} · ADEME` : "Inconnu");
+    setField("dpe", `${prefix}${dpeRange ? ` · ${dpeRange}` : ""}`);
+    setField("ges", gesRange ? `${prefix} · ${gesRange}` : "Inconnu");
     setField("dpe-date", "Inconnue", "Inconnue");
     setField("dpe-surface", "Inconnue", "Inconnue");
   }
@@ -310,39 +310,39 @@
   function renderAudit(summary) {
     if (!summary) return;
     const auditYear = year(summary.date);
-    setField("audit", `Oui${auditYear ? ` · ADEME ${auditYear}` : " · ADEME"}`);
+    setField("audit", `Oui${auditYear ? ` · ${auditYear}` : ""}`);
     setField(
       "audit-initial",
-      summary.initialClass ? `${summary.initialClass} · ADEME` : "Inconnue",
+      summary.initialClass ? `${summary.initialClass}` : "Inconnue",
       "Inconnue",
     );
     setField(
       "audit-final",
-      summary.finalClass ? `${summary.finalClass} · ADEME` : "Inconnue",
+      summary.finalClass ? `${summary.finalClass}` : "Inconnue",
       "Inconnue",
     );
     setField(
       "audit-gain",
       summary.classGain === null
         ? "Inconnu"
-        : `${summary.classGain} classe${Math.abs(summary.classGain) > 1 ? "s" : ""} · ADEME`,
+        : `${summary.classGain} classe${Math.abs(summary.classGain) > 1 ? "s" : ""}`,
     );
     const visibleWorks = summary.works.slice(0, 4);
     const worksSuffix = summary.works.length > visibleWorks.length ? "…" : "";
     setField(
       "audit-works",
-      visibleWorks.length ? `${visibleWorks.join(" · ")}${worksSuffix} · ADEME` : "Inconnue",
+      visibleWorks.length ? `${visibleWorks.join(" · ")}${worksSuffix}` : "Inconnue",
       "Inconnue",
     );
     setField(
       "audit-cost",
-      summary.cost === null ? "Inconnu" : `${formatNumber(summary.cost, 0)} € · ADEME`,
+      summary.cost === null ? "Inconnu" : `${formatNumber(summary.cost, 0)} €`,
     );
     setField(
       "audit-savings",
       summary.savingsPercent === null
         ? "Inconnue"
-        : `${formatNumber(summary.savingsPercent, 0)} % · ADEME`,
+        : `${formatNumber(summary.savingsPercent, 0)} %`,
       "Inconnue",
     );
   }

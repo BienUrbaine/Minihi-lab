@@ -336,7 +336,7 @@
         label: "DPE représentatif",
         field: "bdnb-dpe",
         value: availableValue(building?.classe_bilan_dpe)
-          ? `${String(building.classe_bilan_dpe).trim().toUpperCase()} · BDNB`
+          ? `${String(building.classe_bilan_dpe).trim().toUpperCase()}`
           : "Inconnu",
       },
       {
@@ -347,7 +347,7 @@
             ? "Inconnu"
             : `${ges.toLocaleString("fr-FR", {
                 maximumFractionDigits: 1,
-              })} kgCO₂e/m²/an · BDNB`,
+              })} kgCO₂e/m²/an`,
       },
       { label: "Chauffage", value: formatHeating(building) },
       { label: "Copropriété", value: formatCopropriete(building) },
@@ -403,8 +403,8 @@
     ];
     const renovationPotential = [
       { label: "Rattachement du DPE", field: "dpe-scope", value: "Inconnu" },
-      { label: "DPE ADEME", field: "dpe", value: "Inconnu" },
-      { label: "GES ADEME", field: "ges", value: "Inconnu" },
+      { label: "DPE", field: "dpe", value: "Inconnu" },
+      { label: "GES", field: "ges", value: "Inconnu" },
       { label: "Date du diagnostic logement", field: "dpe-date", value: "Inconnue" },
       { label: "Surface habitable du logement", field: "dpe-surface", value: "Inconnue" },
       { label: "Audit énergétique", field: "audit", value: "Inconnu" },
