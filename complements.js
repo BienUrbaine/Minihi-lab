@@ -82,9 +82,17 @@ async function loadComplementaryData() {
 
 const complementaryLoadPromise = loadComplementaryData();
 
-async function resolveCityCode(longitude, latitude, knownCityCode = "") {
+async function resolveAddressIdentity(
+  longitude,
+  latitude,
+  knownCityCode = "",
+  knownBanId = "",
+) {
   const normalizedKnownCode = normalizeCityCodeValue(knownCityCode);
-  if (normalizedKnownCode) return normalizedKnownCode;
+  const normalizedKnownBanId = String(knownBanId || "").trim();
+  if (normalizedKnownCode && normalizedKnownBanId) {
+    return { citycode: normalizedKnownCode, banId: normalizedKnownBanId };
+  }
 
   const params = new URLSearchParams({
     index: "address",
@@ -98,14 +106,19 @@ async function resolveCityCode(longitude, latitude, knownCityCode = "") {
       `https://data.geopf.fr/geocodage/reverse?${params}`,
       { headers: { Accept: "application/json" } },
     );
-    if (!response.ok) return "";
+    if (!response.ok) {
+      return { citycode: normalizedKnownCode, banId: normalizedKnownBanId };
+    }
     const payload = await response.json();
-    return normalizeCityCodeValue(
-      payload.features?.[0]?.properties?.citycode,
-    );
+    const properties = payload.features?.[0]?.properties || {};
+    return {
+      citycode:
+        normalizedKnownCode || normalizeCityCodeValue(properties.citycode),
+      banId: normalizedKnownBanId || String(properties.id || "").trim(),
+    };
   } catch (error) {
-    console.warn("Code INSEE de la commune indisponible", error);
-    return "";
+    console.warn("Identifiants BAN indisponibles", error);
+    return { citycode: normalizedKnownCode, banId: normalizedKnownBanId };
   }
 }
 
@@ -153,6 +166,7 @@ function normalizeSuggestion(raw) {
     label,
     longitude,
     latitude,
+    banId: String(raw.id || "").trim(),
     city: String(raw.city || "").trim(),
     postcode: String(raw.zipcode || "").trim(),
     citycode: cityCodeFromRawSuggestion(raw),
@@ -212,7 +226,13 @@ function showOutside(label, zonages = "Inconnues") {
   `;
 }
 
-async function locatePoint(longitude, latitude, label, knownCityCode = "") {
+async function locatePoint(
+  longitude,
+  latitude,
+  label,
+  knownCityCode = "",
+  banId = "",
+) {
   const point = [longitude, latitude];
   const matches = features.filter((feature) =>
     featureContainsPoint(feature, point),
@@ -227,20 +247,25 @@ async function locatePoint(longitude, latitude, label, knownCityCode = "") {
 
   window.dispatchEvent(
     new CustomEvent("minihi:address-selected", {
-      detail: { longitude, latitude, label },
+      detail: { longitude, latitude, label, banId },
     }),
   );
 
   await complementaryLoadPromise;
-  const citycode = await resolveCityCode(longitude, latitude, knownCityCode);
-  const zonages = zonagesValue(citycode);
+  const addressIdentity = await resolveAddressIdentity(
+    longitude,
+    latitude,
+    knownCityCode,
+    banId,
+  );
+  const zonages = zonagesValue(addressIdentity.citycode);
 
   if (matches.length) showFound(label, matches, zonages);
   else showOutside(label, zonages);
 
   window.dispatchEvent(
     new CustomEvent("minihi:result-rendered", {
-      detail: { longitude, latitude, label },
+      detail: { longitude, latitude, label, banId: addressIdentity.banId },
     }),
   );
 }
@@ -255,5 +280,6 @@ function selectSuggestion(index) {
     selected.latitude,
     selected.label,
     selected.citycode,
+    selected.banId,
   );
 }

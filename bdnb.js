@@ -284,8 +284,8 @@
             : escapeHtml(value);
 
           return `
-          <div class="commune-row">
-            <span><strong>${escapeHtml(row.label)} :</strong> ${valueMarkup}</span>
+          <div class="commune-row"${row.field ? ` data-field="${escapeHtml(row.field)}"` : ""}>
+            <span><strong>${escapeHtml(row.label)} :</strong> <span class="field-value">${valueMarkup}</span></span>
           </div>
         `;
         },
@@ -333,20 +333,24 @@
         value: constructionYear === null ? "Inconnue" : String(constructionYear),
       },
       {
-        label: "DPE représentatif",
+        label: "DPE",
+        field: "dpe",
         value: availableValue(building?.classe_bilan_dpe)
-          ? String(building.classe_bilan_dpe).trim().toUpperCase()
+          ? `${String(building.classe_bilan_dpe).trim().toUpperCase()} · BDNB`
           : "Inconnu",
       },
       {
-        label: "GES estimé",
+        label: "GES",
+        field: "ges",
         value:
           ges === null
             ? "Inconnu"
             : `${ges.toLocaleString("fr-FR", {
                 maximumFractionDigits: 1,
-              })} kgCO₂e/m²/an`,
+              })} kgCO₂e/m²/an · BDNB`,
       },
+      { label: "Date du diagnostic", field: "dpe-date", value: "Inconnue" },
+      { label: "Surface habitable", field: "dpe-surface", value: "Inconnue" },
       { label: "Chauffage", value: formatHeating(building) },
       { label: "Copropriété", value: formatCopropriete(building) },
     ];
@@ -399,6 +403,15 @@
       },
       { label: "Géothermie", value: formatGeothermal(building) },
     ];
+    const renovationPotential = [
+      { label: "Audit énergétique", field: "audit", value: "Inconnu" },
+      { label: "Performance initiale", field: "audit-initial", value: "Inconnue" },
+      { label: "Performance après travaux", field: "audit-final", value: "Inconnue" },
+      { label: "Gain de classes", field: "audit-gain", value: "Inconnu" },
+      { label: "Nature des travaux", field: "audit-works", value: "Inconnue" },
+      { label: "Coût estimatif des travaux", field: "audit-cost", value: "Inconnu" },
+      { label: "Économies d’énergie estimées", field: "audit-savings", value: "Inconnues" },
+    ];
 
     buildingSection().innerHTML = `
       <div class="building-block">
@@ -412,6 +425,10 @@
       <div class="building-block building-context">
         <p class="field-label">Contexte de rénovation</p>
         ${rowsMarkup(renovationContext)}
+      </div>
+      <div class="building-block building-renovation">
+        <p class="field-label">Potentiel de rénovation</p>
+        ${rowsMarkup(renovationPotential)}
       </div>
     `;
   }
@@ -507,7 +524,15 @@
     }
   }
 
-  async function loadBuilding(longitude, latitude) {
+  function notifyBuildingResolved(address, building) {
+    window.dispatchEvent(
+      new CustomEvent("minihi:building-resolved", {
+        detail: { ...address, building: building || null },
+      }),
+    );
+  }
+
+  async function loadBuilding(longitude, latitude, address = {}) {
     requestNumber += 1;
     const currentRequest = requestNumber;
     if (requestController) requestController.abort();
@@ -525,6 +550,7 @@
       const selectedBuilding = closestBuilding(buildings, point);
       if (!selectedBuilding) {
         renderUnknownBuilding();
+        notifyBuildingResolved(address, null);
         return;
       }
       const enrichedBuilding = await enrichWithRnc(
@@ -533,10 +559,12 @@
       );
       if (currentRequest !== requestNumber) return;
       renderSelectedBuilding(enrichedBuilding);
+      notifyBuildingResolved(address, enrichedBuilding);
     } catch (error) {
       if (error.name === "AbortError" || currentRequest !== requestNumber) return;
       console.warn("Informations BDNB indisponibles", error);
       renderUnknownBuilding();
+      notifyBuildingResolved(address, null);
     }
   }
 
@@ -544,6 +572,11 @@
     const longitude = Number(event.detail?.longitude);
     const latitude = Number(event.detail?.latitude);
     if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return;
-    loadBuilding(longitude, latitude);
+    loadBuilding(longitude, latitude, {
+      longitude,
+      latitude,
+      label: String(event.detail?.label || ""),
+      banId: String(event.detail?.banId || ""),
+    });
   });
 })();

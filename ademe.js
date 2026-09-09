@@ -1,0 +1,412 @@
+(() => {
+  const DPE_ENDPOINT =
+    "https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines";
+  const AUDIT_ENDPOINT =
+    "https://data.ademe.fr/data-fair/api/v1/datasets/audit-opendata/lines";
+  const MAX_RESULTS = 200;
+  const DPE_FIELDS = [
+    "numero_dpe",
+    "date_derniere_modification_dpe",
+    "date_etablissement_dpe",
+    "date_fin_validite_dpe",
+    "numero_dpe_remplace",
+    "etiquette_dpe",
+    "etiquette_ges",
+    "type_batiment",
+    "surface_habitable_logement",
+    "surface_habitable_immeuble",
+    "identifiant_ban",
+  ];
+  const AUDIT_FIELDS = [
+    "n_audit",
+    "id_etape",
+    "categorie_scenario",
+    "etape_travaux",
+    "date_derniere_modification",
+    "date_etablissement_audit",
+    "date_fin_validite_audit",
+    "n_audit_remplace",
+    "numero_dpe",
+    "classe_bilan_dpe",
+    "cout_travaux",
+    "couts_cumules_travaux",
+    "gains_relatifs_cumules_conso_5_usages_m2_ep",
+    "gain_relatif_conso_5_usages_m2_ep",
+    "travaux_realises",
+  ];
+  const CLASS_ORDER = ["A", "B", "C", "D", "E", "F", "G"];
+
+  let requestController = null;
+  let requestNumber = 0;
+
+  function text(value) {
+    return String(value ?? "").trim();
+  }
+
+  function validClass(value) {
+    const normalized = text(value).toUpperCase();
+    return CLASS_ORDER.includes(normalized) ? normalized : "";
+  }
+
+  function finiteNumber(value) {
+    if (value === null || value === undefined || text(value) === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function validDate(value, today = new Date()) {
+    const raw = text(value);
+    if (!raw) return true;
+    const parsed = new Date(`${raw.slice(0, 10)}T23:59:59Z`);
+    return !Number.isNaN(parsed.valueOf()) && parsed >= today;
+  }
+
+  function latestDate(record, modificationField, establishmentField) {
+    return text(record?.[modificationField] || record?.[establishmentField]);
+  }
+
+  function removeReplaced(records, idField, replacedField) {
+    const replacedIds = new Set(
+      records.map((record) => text(record?.[replacedField])).filter(Boolean),
+    );
+    return records.filter((record) => !replacedIds.has(text(record?.[idField])));
+  }
+
+  function deduplicateDpes(records) {
+    const byNumber = new Map();
+    records.forEach((record) => {
+      const number = text(record?.numero_dpe);
+      if (!number) return;
+      const previous = byNumber.get(number);
+      if (
+        !previous ||
+        latestDate(record, "date_derniere_modification_dpe", "date_etablissement_dpe") >
+          latestDate(previous, "date_derniere_modification_dpe", "date_etablissement_dpe")
+      ) {
+        byNumber.set(number, record);
+      }
+    });
+    return [...byNumber.values()];
+  }
+
+  function selectDpe(records, { banId = "", building = null, today } = {}) {
+    const exact = records.filter(
+      (record) => text(record?.identifiant_ban) === text(banId),
+    );
+    const current = removeReplaced(
+      deduplicateDpes(exact),
+      "numero_dpe",
+      "numero_dpe_remplace",
+    ).filter(
+      (record) =>
+        validDate(record?.date_fin_validite_dpe, today) &&
+        validClass(record?.etiquette_dpe),
+    );
+
+    if (!current.length) return { kind: "none", records: [] };
+
+    const numberedBanAddress = /_\d{5}$/.test(text(banId));
+    const buildingUsage = text(building?.usage_principal_bdnb_open).toLowerCase();
+    const allHouses = current.every(
+      (record) => text(record?.type_batiment).toLowerCase() === "maison",
+    );
+    const buildingLooksCollective =
+      buildingUsage.includes("collectif") ||
+      Boolean(text(building?.rncRecord?.numero_immat_principal));
+
+    if (numberedBanAddress && allHouses && !buildingLooksCollective) {
+      const selected = [...current].sort((left, right) =>
+        latestDate(right, "date_derniere_modification_dpe", "date_etablissement_dpe")
+          .localeCompare(
+            latestDate(left, "date_derniere_modification_dpe", "date_etablissement_dpe"),
+          ),
+      )[0];
+      return { kind: "individual", record: selected, records: current };
+    }
+
+    return { kind: "collective", records: current };
+  }
+
+  function selectAuditRows(records, dpeNumber, today = new Date()) {
+    const matching = records.filter(
+      (record) =>
+        text(record?.numero_dpe) === text(dpeNumber) &&
+        validDate(record?.date_fin_validite_audit, today),
+    );
+    if (!matching.length) return null;
+
+    const auditIds = [...new Set(matching.map((record) => text(record?.n_audit)))].filter(Boolean);
+    const replacedIds = new Set(
+      matching.map((record) => text(record?.n_audit_remplace)).filter(Boolean),
+    );
+    const currentIds = auditIds.filter((id) => !replacedIds.has(id));
+    if (!currentIds.length) return null;
+
+    const selectedId = currentIds.sort((left, right) => {
+      const leftRows = matching.filter((record) => text(record?.n_audit) === left);
+      const rightRows = matching.filter((record) => text(record?.n_audit) === right);
+      const leftDate = Math.max(...leftRows.map((record) => Date.parse(record.date_etablissement_audit) || 0));
+      const rightDate = Math.max(...rightRows.map((record) => Date.parse(record.date_etablissement_audit) || 0));
+      return rightDate - leftDate || right.localeCompare(left);
+    })[0];
+
+    return matching.filter((record) => text(record?.n_audit) === selectedId);
+  }
+
+  function principalScenario(rows) {
+    const normalized = (value) => text(value).toLowerCase();
+    const candidates = rows.filter(
+      (row) => normalized(row.categorie_scenario) !== "état initial",
+    );
+    return (
+      candidates.find(
+        (row) =>
+          normalized(row.categorie_scenario).includes("une étape") &&
+          normalized(row.categorie_scenario).includes("principal") &&
+          normalized(row.etape_travaux).includes("finale"),
+      ) ||
+      candidates.find(
+        (row) =>
+          normalized(row.categorie_scenario).includes("principal") &&
+          normalized(row.etape_travaux).includes("finale"),
+      ) ||
+      candidates.find((row) => normalized(row.etape_travaux).includes("finale")) ||
+      candidates[0] ||
+      null
+    );
+  }
+
+  function summarizeAudit(rows) {
+    if (!rows?.length) return null;
+    const initial = rows.find(
+      (row) => text(row.categorie_scenario).toLowerCase() === "état initial",
+    );
+    const final = principalScenario(rows);
+    if (!final) return null;
+
+    const initialClass = validClass(initial?.classe_bilan_dpe);
+    const finalClass = validClass(final?.classe_bilan_dpe);
+    const initialIndex = CLASS_ORDER.indexOf(initialClass);
+    const finalIndex = CLASS_ORDER.indexOf(finalClass);
+    const classGain =
+      initialIndex >= 0 && finalIndex >= 0 ? initialIndex - finalIndex : null;
+    const cumulativeCost = finiteNumber(final.couts_cumules_travaux);
+    const stepCost = finiteNumber(final.cout_travaux);
+    const relativeSavings = finiteNumber(
+      final.gains_relatifs_cumules_conso_5_usages_m2_ep ??
+        final.gain_relatif_conso_5_usages_m2_ep,
+    );
+    const works = [...new Set(
+      text(final.travaux_realises)
+        .split(",")
+        .map((work) => work.trim())
+        .filter(Boolean),
+    )];
+
+    return {
+      date: text(final.date_etablissement_audit || initial?.date_etablissement_audit),
+      initialClass,
+      finalClass,
+      classGain,
+      cost: cumulativeCost !== null
+        ? cumulativeCost
+        : stepCost !== null
+          ? stepCost
+          : null,
+      savingsPercent:
+        relativeSavings !== null && Math.abs(relativeSavings) <= 1
+          ? Math.abs(relativeSavings) * 100
+          : null,
+      works,
+    };
+  }
+
+  function queryUrl(endpoint, field, value, fields) {
+    const params = new URLSearchParams({
+      size: String(MAX_RESULTS),
+      qs: `${field}:"${text(value).replaceAll('"', '\\"')}"`,
+      select: fields.join(","),
+    });
+    return `${endpoint}?${params}`;
+  }
+
+  async function fetchLines(endpoint, field, value, fields, signal) {
+    const response = await fetch(queryUrl(endpoint, field, value, fields), {
+      signal,
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error(`ADEME HTTP ${response.status}`);
+    const payload = await response.json();
+    return Array.isArray(payload?.results) ? payload.results : [];
+  }
+
+  function formatDate(value) {
+    const raw = text(value).slice(0, 10);
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : "";
+  }
+
+  function year(value) {
+    return text(value).slice(0, 4);
+  }
+
+  function formatNumber(value, maximumFractionDigits = 1) {
+    return Number(value).toLocaleString("fr-FR", { maximumFractionDigits });
+  }
+
+  function setField(field, value, unknown = "Inconnu") {
+    const row = document.querySelector(`[data-field="${field}"]`);
+    const target = row?.querySelector(".field-value");
+    if (!target) return;
+    const displayed = text(value) || unknown;
+    target.textContent = displayed;
+    target.className = "field-value";
+    if (displayed === "Inconnu" || displayed === "Inconnue") {
+      target.classList.add("value-unknown");
+    }
+  }
+
+  function renderIndividualDpe(record) {
+    const diagnosticYear = year(record.date_etablissement_dpe);
+    const provenance = diagnosticYear ? ` · ADEME ${diagnosticYear}` : " · ADEME";
+    setField("dpe", `${validClass(record.etiquette_dpe)}${provenance}`);
+    setField(
+      "ges",
+      validClass(record.etiquette_ges)
+        ? `${validClass(record.etiquette_ges)}${provenance}`
+        : "Inconnu",
+    );
+    setField("dpe-date", formatDate(record.date_etablissement_dpe), "Inconnue");
+    const surface = finiteNumber(record.surface_habitable_logement);
+    setField(
+      "dpe-surface",
+      surface !== null && surface > 0
+        ? `${formatNumber(surface)} m² · ADEME`
+        : "Inconnue",
+      "Inconnue",
+    );
+  }
+
+  function classRange(records, field) {
+    const classes = records.map((record) => validClass(record[field])).filter(Boolean);
+    if (!classes.length) return "";
+    classes.sort((left, right) => CLASS_ORDER.indexOf(left) - CLASS_ORDER.indexOf(right));
+    return classes[0] === classes.at(-1) ? classes[0] : `${classes[0]} à ${classes.at(-1)}`;
+  }
+
+  function renderCollectiveDpe(records) {
+    const count = records.length;
+    const prefix = `Synthèse adresse · ${count} diagnostic${count > 1 ? "s" : ""}`;
+    const dpeRange = classRange(records, "etiquette_dpe");
+    const gesRange = classRange(records, "etiquette_ges");
+    setField("dpe", `${prefix}${dpeRange ? ` · ${dpeRange}` : ""} · ADEME`);
+    setField("ges", `${prefix}${gesRange ? ` · ${gesRange}` : ""} · ADEME`);
+    setField("dpe-date", "Inconnue", "Inconnue");
+    setField("dpe-surface", "Inconnue", "Inconnue");
+  }
+
+  function renderAudit(summary) {
+    if (!summary) return;
+    const auditYear = year(summary.date);
+    setField("audit", `Oui${auditYear ? ` · ADEME ${auditYear}` : " · ADEME"}`);
+    setField(
+      "audit-initial",
+      summary.initialClass ? `${summary.initialClass} · ADEME` : "Inconnue",
+      "Inconnue",
+    );
+    setField(
+      "audit-final",
+      summary.finalClass ? `${summary.finalClass} · ADEME` : "Inconnue",
+      "Inconnue",
+    );
+    setField(
+      "audit-gain",
+      summary.classGain === null
+        ? "Inconnu"
+        : `${summary.classGain} classe${Math.abs(summary.classGain) > 1 ? "s" : ""} · ADEME`,
+    );
+    const visibleWorks = summary.works.slice(0, 4);
+    const worksSuffix = summary.works.length > visibleWorks.length ? "…" : "";
+    setField(
+      "audit-works",
+      visibleWorks.length ? `${visibleWorks.join(" · ")}${worksSuffix} · ADEME` : "Inconnue",
+      "Inconnue",
+    );
+    setField(
+      "audit-cost",
+      summary.cost === null ? "Inconnu" : `${formatNumber(summary.cost, 0)} € · ADEME`,
+    );
+    setField(
+      "audit-savings",
+      summary.savingsPercent === null
+        ? "Inconnues"
+        : `${formatNumber(summary.savingsPercent, 0)} % · ADEME`,
+      "Inconnues",
+    );
+  }
+
+  async function loadAdeme(detail) {
+    requestNumber += 1;
+    const currentRequest = requestNumber;
+    if (requestController) requestController.abort();
+    requestController = new AbortController();
+
+    const banId = text(detail?.banId);
+    if (!banId) return;
+
+    try {
+      const dpeRecords = await fetchLines(
+        DPE_ENDPOINT,
+        "identifiant_ban",
+        banId,
+        DPE_FIELDS,
+        requestController.signal,
+      );
+      if (currentRequest !== requestNumber) return;
+      const selection = selectDpe(dpeRecords, {
+        banId,
+        building: detail?.building,
+      });
+
+      if (selection.kind === "individual") {
+        renderIndividualDpe(selection.record);
+      } else if (selection.kind === "collective") {
+        renderCollectiveDpe(selection.records);
+        return;
+      } else {
+        return;
+      }
+
+      const auditRows = await fetchLines(
+        AUDIT_ENDPOINT,
+        "numero_dpe",
+        selection.record.numero_dpe,
+        AUDIT_FIELDS,
+        requestController.signal,
+      );
+      if (currentRequest !== requestNumber) return;
+      renderAudit(
+        summarizeAudit(
+          selectAuditRows(auditRows, selection.record.numero_dpe),
+        ),
+      );
+    } catch (error) {
+      if (error.name === "AbortError" || currentRequest !== requestNumber) return;
+      console.warn("Données ADEME indisponibles", error);
+    }
+  }
+
+  window.addEventListener("minihi:building-resolved", (event) => {
+    loadAdeme(event.detail || {});
+  });
+
+  const api = {
+    selectDpe,
+    selectAuditRows,
+    summarizeAudit,
+    removeReplaced,
+    loadAdeme,
+  };
+  window.MinihiAdeme = api;
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+})();
