@@ -13,6 +13,7 @@
     "annee_construction_dpe",
     "classe_bilan_dpe",
     "emission_ges_5_usages_m2",
+    "nb_log",
     "type_isolation_mur_exterieur",
     "type_isolation_plancher_bas",
     "type_isolation_plancher_haut",
@@ -402,18 +403,21 @@
       { label: "Géothermie", value: formatGeothermal(building) },
     ];
     const renovationPotential = [
-      { label: "Rattachement du DPE", field: "dpe-scope", value: "Inconnu" },
+      {
+        label: "Logements dans le bâtiment",
+        value:
+          numericValue(building?.nb_log) === null
+            ? "Inconnu"
+            : String(numericValue(building.nb_log)),
+      },
+      { label: "Diagnostics disponibles", field: "dpe-count", value: "Inconnu" },
       { label: "DPE", field: "dpe", value: "Inconnu" },
       { label: "GES", field: "ges", value: "Inconnu" },
-      { label: "Date du diagnostic logement", field: "dpe-date", value: "Inconnue" },
-      { label: "Surface habitable du logement", field: "dpe-surface", value: "Inconnue" },
+      { label: "Date du diagnostic", field: "dpe-date", value: "Inconnue" },
+      { label: "Surface habitable", field: "dpe-surface", value: "Inconnue" },
       { label: "Audit énergétique", field: "audit", value: "Inconnu" },
       { label: "Performance initiale", field: "audit-initial", value: "Inconnue" },
-      { label: "Performance après travaux", field: "audit-final", value: "Inconnue" },
       { label: "Gain de classes", field: "audit-gain", value: "Inconnu" },
-      { label: "Nature des travaux", field: "audit-works", value: "Inconnue" },
-      { label: "Coût estimatif des travaux", field: "audit-cost", value: "Inconnu" },
-      { label: "Économie d’énergie estimée", field: "audit-savings", value: "Inconnue" },
     ];
 
     buildingSection().innerHTML = `

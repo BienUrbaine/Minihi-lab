@@ -266,8 +266,42 @@
     }
   }
 
+  function setLabel(field, label) {
+    const target = document.querySelector(`[data-field="${field}"] strong`);
+    if (target) target.textContent = `${label} :`;
+  }
+
+  function medianNumber(values) {
+    const numbers = values.filter((value) => value !== null).sort((a, b) => a - b);
+    if (!numbers.length) return null;
+    const middle = Math.floor(numbers.length / 2);
+    return numbers.length % 2
+      ? numbers[middle]
+      : (numbers[middle - 1] + numbers[middle]) / 2;
+  }
+
+  function medianClass(records, field) {
+    const indexes = records
+      .map((record) => CLASS_ORDER.indexOf(validClass(record[field])))
+      .filter((index) => index >= 0)
+      .sort((a, b) => a - b);
+    if (!indexes.length) return "";
+    const middle = Math.floor(indexes.length / 2);
+    const index = indexes.length % 2
+      ? indexes[middle]
+      : Math.ceil((indexes[middle - 1] + indexes[middle]) / 2);
+    return CLASS_ORDER[index];
+  }
+
+  function latestDiagnosticDate(records) {
+    return records
+      .map((record) => text(record.date_etablissement_dpe))
+      .filter(Boolean)
+      .sort((left, right) => right.localeCompare(left))[0] || "";
+  }
+
   function renderIndividualDpe(record) {
-    setField("dpe-scope", "Maison · diagnostic retenu à l’adresse");
+    setField("dpe-count", "1");
     const diagnosticYear = year(record.date_etablissement_dpe);
     const provenance = diagnosticYear ? ` · ${diagnosticYear}` : "";
     setField("dpe", `${validClass(record.etiquette_dpe)}${provenance}`);
@@ -288,23 +322,36 @@
     );
   }
 
-  function classRange(records, field) {
-    const classes = records.map((record) => validClass(record[field])).filter(Boolean);
-    if (!classes.length) return "";
-    classes.sort((left, right) => CLASS_ORDER.indexOf(left) - CLASS_ORDER.indexOf(right));
-    return classes[0] === classes.at(-1) ? classes[0] : `${classes[0]} à ${classes.at(-1)}`;
-  }
-
   function renderCollectiveDpe(records) {
-    setField("dpe-scope", "À l’adresse — logement non identifié");
     const count = records.length;
-    const prefix = `Synthèse adresse · ${count} diagnostic${count > 1 ? "s" : ""}`;
-    const dpeRange = classRange(records, "etiquette_dpe");
-    const gesRange = classRange(records, "etiquette_ges");
-    setField("dpe", `${prefix}${dpeRange ? ` · ${dpeRange}` : ""}`);
-    setField("ges", gesRange ? `${prefix} · ${gesRange}` : "Inconnu");
-    setField("dpe-date", "Inconnue", "Inconnue");
-    setField("dpe-surface", "Inconnue", "Inconnue");
+    const multiple = count > 1;
+    const dpe = medianClass(records, "etiquette_dpe");
+    const ges = medianClass(records, "etiquette_ges");
+    const surface = medianNumber(
+      records
+        .map((record) => finiteNumber(record.surface_habitable_logement))
+        .filter((value) => value !== null && value > 0),
+    );
+    const latestDate = latestDiagnosticDate(records);
+
+    setField("dpe-count", String(count));
+    setLabel("dpe", multiple ? "DPE médian" : "DPE du logement diagnostiqué");
+    setLabel("ges", multiple ? "GES médian" : "GES du logement diagnostiqué");
+    setLabel("dpe-date", multiple ? "Diagnostic le plus récent" : "Date du diagnostic");
+    setLabel(
+      "dpe-surface",
+      multiple
+        ? "Surface médiane des logements diagnostiqués"
+        : "Surface du logement diagnostiqué",
+    );
+    setField("dpe", dpe || "Inconnu");
+    setField("ges", ges || "Inconnu");
+    setField("dpe-date", formatDate(latestDate), "Inconnue");
+    setField(
+      "dpe-surface",
+      surface === null ? "Inconnue" : `${formatNumber(surface)} m²`,
+      "Inconnue",
+    );
   }
 
   function renderAudit(summary) {
@@ -317,33 +364,10 @@
       "Inconnue",
     );
     setField(
-      "audit-final",
-      summary.finalClass ? `${summary.finalClass}` : "Inconnue",
-      "Inconnue",
-    );
-    setField(
       "audit-gain",
       summary.classGain === null
         ? "Inconnu"
         : `${summary.classGain} classe${Math.abs(summary.classGain) > 1 ? "s" : ""}`,
-    );
-    const visibleWorks = summary.works.slice(0, 4);
-    const worksSuffix = summary.works.length > visibleWorks.length ? "…" : "";
-    setField(
-      "audit-works",
-      visibleWorks.length ? `${visibleWorks.join(" · ")}${worksSuffix}` : "Inconnue",
-      "Inconnue",
-    );
-    setField(
-      "audit-cost",
-      summary.cost === null ? "Inconnu" : `${formatNumber(summary.cost, 0)} €`,
-    );
-    setField(
-      "audit-savings",
-      summary.savingsPercent === null
-        ? "Inconnue"
-        : `${formatNumber(summary.savingsPercent, 0)} %`,
-      "Inconnue",
     );
   }
 
@@ -376,6 +400,7 @@
         renderCollectiveDpe(selection.records);
         return;
       } else {
+        setField("dpe-count", "0");
         return;
       }
 
@@ -406,6 +431,8 @@
     selectDpe,
     selectAuditRows,
     summarizeAudit,
+    medianClass,
+    medianNumber,
     removeReplaced,
     loadAdeme,
   };
