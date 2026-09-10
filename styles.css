@@ -307,17 +307,17 @@ h1 {
   width: 100%;
   min-height: 52px;
   padding: 0 18px;
-  border: 1px solid #bd480d;
+  border: 1px solid #d2d7dc;
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  color: #fff;
-  background: #c84a0a;
+  color: #4f5963;
+  background: #e9ecef;
   font-weight: 750;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(143, 47, 8, 0.16);
+  box-shadow: 0 8px 18px rgba(64, 72, 80, 0.1);
   transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
@@ -326,8 +326,8 @@ h1 {
 }
 
 .street-view-trigger:hover {
-  background: #ad3d07;
-  box-shadow: 0 10px 22px rgba(143, 47, 8, 0.22);
+  background: #dde2e6;
+  box-shadow: 0 10px 22px rgba(64, 72, 80, 0.15);
   transform: translateY(-1px);
 }
 
