@@ -115,5 +115,66 @@
     <script src="./bdnb.js?v=20260909-5"></script>
     <script src="./ademe.js?v=20260909-5"></script>
     <script src="./streetview.js?v=20260901-3"></script>
+    <script>
+      (() => {
+        const legend = document.querySelector(".map-legend");
+        if (!legend) return;
+
+        const palettes = {
+          "OPAH-RU": ["#67274e", "#9a3f75", "OPAH-RU"],
+          PIG: ["#8f3034", "#c94b50", "PIG"],
+          "OPAH-D": ["#a6531c", "#e07a32", "OPAH-D"],
+          POPAC: ["#916d13", "#d2a12a", "POPAC"],
+          OPAH: ["#7b3c24", "#b85c38", "OPAH"],
+          "PACTE TERRITORIAL": ["#733939", "#a85858", "Pacte territorial"],
+          "OPAH-CD": ["#933a4a", "#d65a6f", "OPAH-CD"],
+          "OPAH-RR": ["#805816", "#c48a2a", "OPAH-RR"],
+        };
+        const preferredOrder = Object.keys(palettes);
+
+        fetch("./data/perimetres.geojson", { cache: "no-store" })
+          .then((response) => {
+            if (!response.ok) throw new Error("Périmètres indisponibles");
+            return response.json();
+          })
+          .then((data) => {
+            const types = new Set();
+            (data.features || []).forEach((feature) => {
+              const geometry = feature?.geometry;
+              if (
+                !geometry ||
+                !["Polygon", "MultiPolygon"].includes(geometry.type) ||
+                !Array.isArray(geometry.coordinates) ||
+                !geometry.coordinates.length
+              ) {
+                return;
+              }
+              const type = String(feature?.properties?.Type || "").trim().toUpperCase();
+              if (type) types.add(type);
+            });
+
+            const orderedTypes = [
+              ...preferredOrder.filter((type) => types.has(type)),
+              ...[...types].filter((type) => !palettes[type]).sort(),
+            ];
+            if (!orderedTypes.length) return;
+
+            legend.replaceChildren();
+            orderedTypes.forEach((type) => {
+              const [stroke, fill, label] = palettes[type] || ["#744637", "#b06d52", type];
+              const item = document.createElement("span");
+              const swatch = document.createElement("i");
+              swatch.className = "legend-swatch";
+              swatch.style.border = `1px solid ${stroke}`;
+              swatch.style.background = `${fill}52`;
+              item.append(swatch, document.createTextNode(label));
+              legend.append(item);
+            });
+          })
+          .catch(() => {
+            // Conserve la légende statique actuelle si le fichier ne peut pas être relu.
+          });
+      })();
+    </script>
   </body>
 </html>
