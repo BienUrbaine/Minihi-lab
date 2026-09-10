@@ -836,6 +836,10 @@ h1 {
   left: 14px;
   bottom: 32px;
   padding: 8px 11px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.45;
   display: flex;
   gap: 12px;
 }
